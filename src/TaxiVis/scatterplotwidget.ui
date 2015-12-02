@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ScatterPlotWidget</class>
+ <widget class="QWidget" name="ScatterPlotWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>808</width>
+    <height>313</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,2">
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <spacer name="horizontalSpacer_3">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>Attribute 1:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="comboBox">
+       <property name="minimumSize">
+        <size>
+         <width>130</width>
+         <height>0</height>
+        </size>
+       </property>
+       <item>
+        <property name="text">
+         <string>Fare Amount</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Tip Amount</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Distance</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Duration</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Tolls Amount</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Average Speed</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Hour of Day</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_2">
+       <property name="text">
+        <string>Attribute 2:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="comboBox_2">
+       <property name="minimumSize">
+        <size>
+         <width>130</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="currentIndex">
+        <number>0</number>
+       </property>
+       <item>
+        <property name="text">
+         <string>Fare Amount</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Tip Amount</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Distance</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Duration</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Tolls Amount</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Average Speed</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Hour of Day</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer_2">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QCustomPlot" name="customPlot" native="true"/>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QCustomPlot</class>
+   <extends>QWidget</extends>
+   <header>qcustomplot.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>comboBox</sender>
+   <signal>currentIndexChanged(QString)</signal>
+   <receiver>ScatterPlotWidget</receiver>
+   <slot>setAttribute1(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>239</x>
+     <y>29</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>4</x>
+     <y>37</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>comboBox_2</sender>
+   <signal>currentIndexChanged(QString)</signal>
+   <receiver>ScatterPlotWidget</receiver>
+   <slot>setAttribute2(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>656</x>
+     <y>24</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>803</x>
+     <y>26</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>setAttribute1(QString)</slot>
+  <slot>setAttribute2(QString)</slot>
+ </slots>
+</ui>

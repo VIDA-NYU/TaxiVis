@@ -1,0 +1,332 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>TimeSelectionWidget</class>
+ <widget class="QWidget" name="TimeSelectionWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>882</width>
+    <height>140</height>
+   </rect>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>10000</width>
+    <height>1000</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_2">
+   <item row="0" column="0" rowspan="3">
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="regularTimeWidget">
+      <attribute name="title">
+       <string>Regular Selection</string>
+      </attribute>
+      <layout class="QHBoxLayout" name="horizontalLayout">
+       <property name="spacing">
+        <number>0</number>
+       </property>
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item>
+        <spacer name="horizontalSpacer_2">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>39</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <layout class="QGridLayout" name="gridLayout">
+         <property name="sizeConstraint">
+          <enum>QLayout::SetDefaultConstraint</enum>
+         </property>
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <item row="1" column="3">
+          <widget class="QComboBox" name="comboBox_2">
+           <property name="minimumSize">
+            <size>
+             <width>90</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="currentIndex">
+            <number>2</number>
+           </property>
+           <item>
+            <property name="text">
+             <string>15 min</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>30 min</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>1 hour</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>1 day</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>1 week</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QPushButton" name="stepBackButton">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="4">
+          <widget class="QLabel" name="label_5">
+           <property name="text">
+            <string>End Time</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="3">
+          <widget class="QLabel" name="label_6">
+           <property name="text">
+            <string>Step Size</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="4">
+          <widget class="QDateTimeEdit" name="endTime">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>165</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="dateTime">
+            <datetime>
+             <hour>0</hour>
+             <minute>0</minute>
+             <second>0</second>
+             <year>2013</year>
+             <month>1</month>
+             <day>2</day>
+            </datetime>
+           </property>
+           <property name="date">
+            <date>
+             <year>2013</year>
+             <month>1</month>
+             <day>2</day>
+            </date>
+           </property>
+           <property name="time">
+            <time>
+             <hour>0</hour>
+             <minute>0</minute>
+             <second>0</second>
+            </time>
+           </property>
+           <property name="displayFormat">
+            <string>ddd MM/dd/yy hh:mm </string>
+           </property>
+           <property name="calendarPopup">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="5">
+          <widget class="QPushButton" name="stepForwardButton">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1" colspan="2">
+          <widget class="QLabel" name="label_4">
+           <property name="text">
+            <string>Start Time</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QDateTimeEdit" name="startTime">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>165</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="dateTime">
+            <datetime>
+             <hour>0</hour>
+             <minute>0</minute>
+             <second>0</second>
+             <year>2013</year>
+             <month>1</month>
+             <day>1</day>
+            </datetime>
+           </property>
+           <property name="date">
+            <date>
+             <year>2013</year>
+             <month>1</month>
+             <day>1</day>
+            </date>
+           </property>
+           <property name="displayFormat">
+            <string>ddd MM/dd/yy hh:mm </string>
+           </property>
+           <property name="calendarPopup">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>22</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="TimeWidget" name="recurrentTimeWidget">
+      <attribute name="title">
+       <string>Recurrent Selection</string>
+      </attribute>
+     </widget>
+    </widget>
+   </item>
+   <item row="2" column="1">
+    <widget class="QPushButton" name="exploreButton">
+     <property name="text">
+      <string>Explore...</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="1">
+    <widget class="QPushButton" name="queryButton">
+     <property name="text">
+      <string>Query</string>
+     </property>
+     <property name="autoDefault">
+      <bool>false</bool>
+     </property>
+     <property name="default">
+      <bool>false</bool>
+     </property>
+     <property name="flat">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>TimeWidget</class>
+   <extends>QWidget</extends>
+   <header>timewidget.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>stepForwardButton</sender>
+   <signal>clicked()</signal>
+   <receiver>TimeSelectionWidget</receiver>
+   <slot>stepForward()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>314</x>
+     <y>151</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>386</x>
+     <y>145</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>stepBackButton</sender>
+   <signal>clicked()</signal>
+   <receiver>TimeSelectionWidget</receiver>
+   <slot>stepBack()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>132</x>
+     <y>148</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>383</x>
+     <y>208</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>stepForward()</slot>
+  <slot>stepBack()</slot>
+ </slots>
+</ui>

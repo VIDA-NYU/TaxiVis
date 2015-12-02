@@ -1,0 +1,325 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>TimeAnalysisWidget</class>
+ <widget class="QWidget" name="TimeAnalysisWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>880</width>
+    <height>903</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="1,2,2">
+   <item>
+    <widget class="QWidget" name="widget" native="true">
+     <layout class="QVBoxLayout" name="verticalLayout">
+      <item>
+       <widget class="QGroupBox" name="groupBox_2">
+        <property name="title">
+         <string>Properties:</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_2">
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_3">
+           <property name="text">
+            <string>Color by:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QComboBox" name="colorByComboBox"/>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="label_4">
+           <property name="text">
+            <string>Radius:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QSlider" name="radiusSlider">
+           <property name="maximum">
+            <number>100</number>
+           </property>
+           <property name="value">
+            <number>5</number>
+           </property>
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="label_5">
+           <property name="text">
+            <string>Opacity</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QSlider" name="opacitySlider">
+           <property name="value">
+            <number>80</number>
+           </property>
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="groupBox">
+        <property name="title">
+         <string>Clustering</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout">
+         <item row="0" column="0" colspan="2">
+          <widget class="QRadioButton" name="highRadioButton">
+           <property name="text">
+            <string>High Dimensional Data</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0" colspan="2">
+          <widget class="QRadioButton" name="lowRadioButton">
+           <property name="text">
+            <string>Low Dimensional Data</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="label">
+           <property name="text">
+            <string>Num Clusters:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="0">
+          <widget class="QLabel" name="label_2">
+           <property name="text">
+            <string>Sim. Metric:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="1">
+          <widget class="QComboBox" name="metricComboBox">
+           <item>
+            <property name="text">
+             <string>Euclidean</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item row="4" column="0" colspan="2">
+          <widget class="QPushButton" name="applyButton">
+           <property name="text">
+            <string>Apply</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QSpinBox" name="numClustersSpin">
+           <property name="minimum">
+            <number>1</number>
+           </property>
+           <property name="maximum">
+            <number>1000</number>
+           </property>
+           <property name="value">
+            <number>2</number>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="legendGroupBox">
+        <property name="title">
+         <string>Legend</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="verticalSpacer">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>671</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QSplitter" name="splitter">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <widget class="QWidget" name="">
+      <layout class="QHBoxLayout" name="horizontalLayout">
+       <item>
+        <widget class="ProjectionViewWidget" name="projectionWidget" native="true"/>
+       </item>
+       <item>
+        <widget class="QWidget" name="widget_2" native="true">
+         <property name="minimumSize">
+          <size>
+           <width>36</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>36</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <widget class="QToolButton" name="singleSelection">
+          <property name="geometry">
+           <rect>
+            <x>0</x>
+            <y>10</y>
+            <width>30</width>
+            <height>30</height>
+           </rect>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>30</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>30</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Sin</string>
+          </property>
+          <property name="checkable">
+           <bool>true</bool>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+         <widget class="QToolButton" name="groupSelection">
+          <property name="geometry">
+           <rect>
+            <x>0</x>
+            <y>50</y>
+            <width>30</width>
+            <height>30</height>
+           </rect>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>30</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>30</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Grp</string>
+          </property>
+          <property name="checkable">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="CalendarWidget" name="calendarWidget" native="true"/>
+    </widget>
+   </item>
+   <item>
+    <widget class="GraphSummaryContainerWidget" name="graphWidget" native="true"/>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ProjectionViewWidget</class>
+   <extends>QWidget</extends>
+   <header>projectionView/projectionviewwidget.h</header>
+   <container>1</container>
+   <slots>
+    <slot>setRadiusFactor(int)</slot>
+    <slot>setOpacity(int)</slot>
+   </slots>
+  </customwidget>
+  <customwidget>
+   <class>CalendarWidget</class>
+   <extends>QWidget</extends>
+   <header>calendarwidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>GraphSummaryContainerWidget</class>
+   <extends>QWidget</extends>
+   <header>graphsummarycontainerwidget.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>radiusSlider</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>projectionWidget</receiver>
+   <slot>setRadiusFactor(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>212</x>
+     <y>88</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>486</x>
+     <y>88</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>opacitySlider</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>projectionWidget</receiver>
+   <slot>setOpacity(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>249</x>
+     <y>124</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>533</x>
+     <y>236</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>performClustering()</slot>
+ </slots>
+</ui>

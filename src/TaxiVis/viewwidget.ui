@@ -1,0 +1,505 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ViewWidget</class>
+ <widget class="QWidget" name="ViewWidget">
+  <property name="windowModality">
+   <enum>Qt::NonModal</enum>
+  </property>
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>752</width>
+    <height>590</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string/>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="resources.qrc">
+    <normaloff>:/Resources/icons/map.png</normaloff>:/Resources/icons/map.png</iconset>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0,1">
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <item>
+      <widget class="TimeSelectionWidget" name="timeSelectionWidget" native="true"/>
+     </item>
+     <item>
+      <widget class="QToolButton" name="syncButton">
+       <property name="text">
+        <string>...</string>
+       </property>
+       <property name="icon">
+        <iconset resource="resources.qrc">
+         <normaloff>:/Resources/icons/sync.gray.png</normaloff>
+         <normalon>:/Resources/icons/sync.color.png</normalon>:/Resources/icons/sync.gray.png</iconset>
+       </property>
+       <property name="checkable">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QSplitter" name="splitter">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <widget class="QWidget" name="layoutWidget">
+      <layout class="QHBoxLayout" name="horizontalLayout">
+       <item>
+        <widget class="GeographicalViewWidget" name="geographicalView" native="true"/>
+       </item>
+       <item>
+        <widget class="QWidget" name="widget" native="true">
+         <property name="minimumSize">
+          <size>
+           <width>36</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>36</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout">
+          <property name="leftMargin">
+           <number>3</number>
+          </property>
+          <property name="topMargin">
+           <number>3</number>
+          </property>
+          <property name="rightMargin">
+           <number>3</number>
+          </property>
+          <property name="bottomMargin">
+           <number>3</number>
+          </property>
+          <item>
+           <widget class="QToolButton" name="pickupModeButton">
+            <property name="minimumSize">
+             <size>
+              <width>30</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>30</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>Trips with pickup in this region.</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="resources.qrc">
+              <normaloff>:/Resources/icons/pickup.png</normaloff>
+              <normalon>:/Resources/icons/pickup.png</normalon>
+              <selectedoff>:/Resources/icons/pickup.png</selectedoff>:/Resources/icons/pickup.png</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>22</width>
+              <height>22</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QToolButton" name="dropoffModeButton">
+            <property name="minimumSize">
+             <size>
+              <width>30</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>30</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>Trips with dropoff in this region.</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="resources.qrc">
+              <normaloff>:/Resources/icons/dropoff.png</normaloff>:/Resources/icons/dropoff.png</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>22</width>
+              <height>22</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QToolButton" name="pickupAndDropoffButton">
+            <property name="minimumSize">
+             <size>
+              <width>30</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>30</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>Trips with pickup and dropoff in this region.</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="resources.qrc">
+              <normaloff>:/Resources/icons/pickup_dropoff.png</normaloff>:/Resources/icons/pickup_dropoff.png</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>22</width>
+              <height>22</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QToolButton" name="linkModeButton">
+            <property name="minimumSize">
+             <size>
+              <width>30</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>30</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>Trips from  first regions to second region.</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="resources.qrc">
+              <normaloff>:/Resources/icons/link.png</normaloff>:/Resources/icons/link.png</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>22</width>
+              <height>22</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="autoExclusive">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QToolButton" name="mergeButton">
+            <property name="minimumSize">
+             <size>
+              <width>30</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>30</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="resources.qrc">
+              <normaloff>:/Resources/icons/merge.png</normaloff>:/Resources/icons/merge.png</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>22</width>
+              <height>22</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QToolButton" name="unmergeButton">
+            <property name="minimumSize">
+             <size>
+              <width>30</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>30</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="resources.qrc">
+              <normaloff>:/Resources/icons/unmerge.png</normaloff>:/Resources/icons/unmerge.png</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>22</width>
+              <height>22</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="verticalSpacer_2">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>40</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QToolButton" name="showMapButton">
+            <property name="minimumSize">
+             <size>
+              <width>30</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>30</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>...</string>
+            </property>
+            <property name="icon">
+             <iconset resource="resources.qrc">
+              <normaloff>:/Resources/icons/map.png</normaloff>:/Resources/icons/map.png</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>22</width>
+              <height>22</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QToolButton" name="showAnimationButton">
+            <property name="minimumSize">
+             <size>
+              <width>30</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>30</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>Show animation for current selection.</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="resources.qrc">
+              <normaloff>:/Resources/icons/animation.png</normaloff>:/Resources/icons/animation.png</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>22</width>
+              <height>22</height>
+             </size>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="checked">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QToolButton" name="exportButton">
+            <property name="minimumSize">
+             <size>
+              <width>30</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>30</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset resource="resources.qrc">
+              <normaloff>:/Resources/icons/export.png</normaloff>:/Resources/icons/export.png</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>22</width>
+              <height>22</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QToolButton" name="exploreButton">
+            <property name="text">
+             <string>explore</string>
+            </property>
+            <property name="icon">
+             <iconset resource="resources.qrc">
+              <normaloff>:/Resources/icons/explore.png</normaloff>:/Resources/icons/explore.png</iconset>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>22</width>
+              <height>22</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="verticalSpacer">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>13</width>
+              <height>231</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QTabWidget" name="tabWidget">
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
+      <widget class="TemporalSeriesPlotWidget" name="timeSeriesWidget">
+       <attribute name="title">
+        <string>Time Serie</string>
+       </attribute>
+      </widget>
+      <widget class="HistogramWidget" name="histogramWidget">
+       <attribute name="title">
+        <string>Histogram</string>
+       </attribute>
+      </widget>
+      <widget class="ScatterPlotWidget" name="scatterPlotWidget">
+       <attribute name="title">
+        <string>ScatterPlot</string>
+       </attribute>
+      </widget>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>GeographicalViewWidget</class>
+   <extends>QWidget</extends>
+   <header>geographicalviewwidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>TimeSelectionWidget</class>
+   <extends>QWidget</extends>
+   <header>timeselectionwidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>TemporalSeriesPlotWidget</class>
+   <extends>QWidget</extends>
+   <header>temporalseriesplotwidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>HistogramWidget</class>
+   <extends>QWidget</extends>
+   <header>histogramwidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ScatterPlotWidget</class>
+   <extends>QWidget</extends>
+   <header>scatterplotwidget.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources>
+  <include location="resources.qrc"/>
+ </resources>
+ <connections/>
+</ui>

@@ -1,0 +1,4 @@
+field1,Screen Name1,Axis Label1,1
+field2,Screen Name2,Axis Label2,1
+field3,Screen Name3,Axis Label3,0
+field4,Screen Name4,Axis Label4,0

@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>TimeExplorationDialog</class>
+ <widget class="QDialog" name="TimeExplorationDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1280</width>
+    <height>850</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Paremeter Exploration In Time</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="spacing">
+    <number>0</number>
+   </property>
+   <item>
+    <widget class="QSplitter" name="splitter">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <widget class="QWidget" name="widget" native="true">
+      <layout class="QHBoxLayout" name="mainLayout"/>
+     </widget>
+     <widget class="QTabWidget" name="tabWidget">
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>250</height>
+       </size>
+      </property>
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
+      <widget class="TemporalSeriesPlotWidget" name="timeSeriesWidget">
+       <attribute name="title">
+        <string>Time Serie</string>
+       </attribute>
+      </widget>
+      <widget class="HistogramWidget" name="histogramWidget">
+       <attribute name="title">
+        <string>Histogram</string>
+       </attribute>
+      </widget>
+      <widget class="ScatterPlotWidget" name="scatterPlotWidget">
+       <attribute name="title">
+        <string>ScatterPlot</string>
+       </attribute>
+      </widget>
+     </widget>
+    </widget>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>TemporalSeriesPlotWidget</class>
+   <extends>QWidget</extends>
+   <header>temporalseriesplotwidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>HistogramWidget</class>
+   <extends>QWidget</extends>
+   <header>histogramwidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ScatterPlotWidget</class>
+   <extends>QWidget</extends>
+   <header>scatterplotwidget.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>accepted()</signal>
+   <receiver>TimeExplorationDialog</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>248</x>
+     <y>254</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>157</x>
+     <y>274</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>rejected()</signal>
+   <receiver>TimeExplorationDialog</receiver>
+   <slot>reject()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>316</x>
+     <y>260</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>286</x>
+     <y>274</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

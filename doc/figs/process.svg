@@ -1,0 +1,406 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="744.09448819"
+   height="1052.3622047"
+   id="svg2"
+   version="1.1"
+   inkscape:version="0.48.4 r9939"
+   inkscape:export-filename="/home/nivan/src/TLCVis/doc/figs/process.png"
+   inkscape:export-xdpi="68.660004"
+   inkscape:export-ydpi="68.660004"
+   sodipodi:docname="New document 1">
+  <defs
+     id="defs4">
+    <marker
+       inkscape:stockid="Arrow1Lend"
+       orient="auto"
+       refY="0.0"
+       refX="0.0"
+       id="Arrow1Lend"
+       style="overflow:visible;">
+      <path
+         id="path3843"
+         d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1.0pt;"
+         transform="scale(0.8) rotate(180) translate(12.5,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow1Mend"
+       orient="auto"
+       refY="0.0"
+       refX="0.0"
+       id="Arrow1Mend"
+       style="overflow:visible;">
+      <path
+         id="path3849"
+         d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1.0pt;"
+         transform="scale(0.4) rotate(180) translate(10,0)" />
+    </marker>
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="0.49497475"
+     inkscape:cx="-1177.5239"
+     inkscape:cy="1183.6328"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     inkscape:window-width="1855"
+     inkscape:window-height="1176"
+     inkscape:window-x="1985"
+     inkscape:window-y="24"
+     inkscape:window-maximized="1" />
+  <metadata
+     id="metadata7">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <g
+       id="g4608"
+       inkscape:export-filename="/home/nivan/src/TLCVis/doc/figs/process.png"
+       inkscape:export-xdpi="68.660004"
+       inkscape:export-ydpi="68.660004">
+      <g
+         transform="matrix(0.76476699,0,0,0.92155548,-1050.6376,-269.3115)"
+         id="g3781">
+        <rect
+           style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.72103006;stroke-opacity:1"
+           id="rect2985"
+           width="591.70758"
+           height="218.24846"
+           x="-1635.9154"
+           y="-187.73738"
+           ry="3.5104668" />
+        <path
+           style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+           d="m -1635.9429,-143.15336 591.4461,0"
+           id="path3779"
+           inkscape:connector-curvature="0" />
+      </g>
+      <flowRoot
+         transform="translate(-760.16465,-404.48486)"
+         style="font-size:40px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Caladea;-inkscape-font-specification:Caladea"
+         id="flowRoot3755"
+         xml:space="preserve"><flowRegion
+           id="flowRegion3757"><rect
+             y="-37.592415"
+             x="-1511.1882"
+             height="49.497482"
+             width="420.22345"
+             id="rect3759" /></flowRegion><flowPara
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Carlito;-inkscape-font-specification:Carlito"
+           id="flowPara3761">CSV files as given by TLC</flowPara></flowRoot>      <g
+         transform="translate(0,-17.610469)"
+         id="g4598">
+        <flowRoot
+           transform="translate(-638.49473,-326.27926)"
+           style="font-size:40px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Caladea;-inkscape-font-specification:Caladea"
+           id="flowRoot3763"
+           xml:space="preserve"><flowRegion
+             id="flowRegion3765"><rect
+               y="-37.592415"
+               x="-1511.1882"
+               height="39.395958"
+               width="158.59387"
+               id="rect3767" /></flowRegion><flowPara
+             style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Carlito;-inkscape-font-specification:Carlito"
+             id="flowPara3769">Trips CSV</flowPara></flowRoot>        <flowRoot
+           xml:space="preserve"
+           id="flowRoot3771"
+           style="font-size:40px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Caladea;-inkscape-font-specification:Caladea"
+           transform="translate(-643.94394,-250.51782)"><flowRegion
+             id="flowRegion3773"><rect
+               id="rect3775"
+               width="158.59387"
+               height="39.395958"
+               x="-1511.1882"
+               y="-37.592415" /></flowRegion><flowPara
+             id="flowPara3777"
+             style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Carlito;-inkscape-font-specification:Carlito">Fares CSV</flowPara></flowRoot>      </g>
+    </g>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#Arrow1Lend)"
+       d="m -1818.0295,-326.49604 109.0965,0"
+       id="path3834"
+       inkscape:connector-curvature="0"
+       inkscape:export-filename="/home/nivan/src/TLCVis/doc/figs/process.png"
+       inkscape:export-xdpi="68.660004"
+       inkscape:export-ydpi="68.660004" />
+    <flowRoot
+       transform="translate(-330.38895,-340.4878)"
+       style="font-size:40px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Caladea;-inkscape-font-specification:Caladea"
+       id="flowRoot4545"
+       xml:space="preserve"
+       inkscape:export-filename="/home/nivan/src/TLCVis/doc/figs/process.png"
+       inkscape:export-xdpi="68.660004"
+       inkscape:export-ydpi="68.660004"><flowRegion
+         id="flowRegion4547"><rect
+           y="-37.592415"
+           x="-1511.1882"
+           height="38.385807"
+           width="168.6954"
+           id="rect4549" /></flowRegion><flowPara
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Carlito;-inkscape-font-specification:Carlito"
+         id="flowPara4551">merge.py</flowPara></flowRoot>    <path
+       inkscape:connector-curvature="0"
+       id="path4641"
+       d="m -1288.0295,-326.49604 109.0965,0"
+       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#Arrow1Lend)"
+       inkscape:export-filename="/home/nivan/src/TLCVis/doc/figs/process.png"
+       inkscape:export-xdpi="68.660004"
+       inkscape:export-ydpi="68.660004" />
+    <flowRoot
+       xml:space="preserve"
+       id="flowRoot4643"
+       style="font-size:40px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Caladea;-inkscape-font-specification:Caladea"
+       transform="matrix(0.74763822,0,0,0.74763822,-169.03425,-341.16735)"
+       inkscape:export-filename="/home/nivan/src/TLCVis/doc/figs/process.png"
+       inkscape:export-xdpi="68.660004"
+       inkscape:export-ydpi="68.660004"><flowRegion
+         id="flowRegion4645"><rect
+           id="rect4647"
+           width="191.55258"
+           height="36.957237"
+           x="-1511.1882"
+           y="-37.592415" /></flowRegion><flowPara
+         id="flowPara4649"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Carlito;-inkscape-font-specification:Carlito">csv2Binary</flowPara></flowRoot>    <g
+       id="g4688"
+       transform="translate(-8,0)"
+       inkscape:export-filename="/home/nivan/src/TLCVis/doc/figs/process.png"
+       inkscape:export-xdpi="68.660004"
+       inkscape:export-ydpi="68.660004">
+      <g
+         id="g4468"
+         transform="matrix(0.56194717,0,0,0.92155548,-742.47997,-268.30135)">
+        <rect
+           ry="3.5104668"
+           y="-187.73738"
+           x="-1635.9154"
+           height="218.24846"
+           width="591.70758"
+           id="rect4470"
+           style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.72103006;stroke-opacity:1" />
+        <path
+           inkscape:connector-curvature="0"
+           id="path4472"
+           d="m -1635.9429,-143.15336 591.4461,0"
+           style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" />
+      </g>
+      <flowRoot
+         xml:space="preserve"
+         id="flowRoot4474"
+         style="font-size:40px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Caladea;-inkscape-font-specification:Caladea"
+         transform="translate(-140.93718,-403.47471)"><flowRegion
+           id="flowRegion4476"><rect
+             id="rect4478"
+             width="420.22345"
+             height="49.497482"
+             x="-1511.1882"
+             y="-37.592415" /></flowRegion><flowPara
+           id="flowPara4480"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Carlito;-inkscape-font-specification:Carlito">CSV TaxiVis schema</flowPara></flowRoot>      <flowRoot
+         transform="translate(-87.462576,-360.88206)"
+         style="font-size:40px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Caladea;-inkscape-font-specification:Caladea"
+         id="flowRoot4482"
+         xml:space="preserve"><flowRegion
+           id="flowRegion4484"><rect
+             y="-37.592415"
+             x="-1511.1882"
+             height="88.89344"
+             width="203.04068"
+             id="rect4486"
+             style="text-align:center;text-anchor:middle" /></flowRegion><flowPara
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;text-anchor:middle;font-family:Carlito;-inkscape-font-specification:Carlito"
+           id="flowPara4488">Merged CSV</flowPara><flowPara
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;text-anchor:middle;font-family:Carlito;-inkscape-font-specification:Carlito"
+           id="flowPara4568">Files</flowPara><flowPara
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;text-anchor:middle;font-family:Carlito;-inkscape-font-specification:Carlito"
+           id="flowPara4566" /></flowRoot>      <flowRoot
+         xml:space="preserve"
+         id="flowRoot4664"
+         style="font-size:40px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#ff0000;fill-opacity:1;stroke:none;font-family:Caladea;-inkscape-font-specification:Caladea"
+         transform="translate(-180.3239,-249.45349)"><flowRegion
+           id="flowRegion4666"><rect
+             style="text-align:center;text-anchor:middle;fill:#ff0000"
+             id="rect4668"
+             width="393.04065"
+             height="37.46487"
+             x="-1511.1882"
+             y="-37.592415" /></flowRegion><flowPara
+           id="flowPara4672"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;text-anchor:middle;fill:#ff0000;font-family:Carlito;-inkscape-font-specification:Carlito">Add extra fields</flowPara><flowPara
+           id="flowPara4674"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;text-anchor:middle;fill:#ff0000;font-family:Carlito;-inkscape-font-specification:Carlito" /></flowRoot>    </g>
+    <g
+       id="g4774"
+       inkscape:export-filename="/home/nivan/src/TLCVis/doc/figs/process.png"
+       inkscape:export-xdpi="68.660004"
+       inkscape:export-ydpi="68.660004">
+      <g
+         transform="matrix(0.56194717,0,0,0.92155548,-212.47997,-268.30135)"
+         id="g4710">
+        <rect
+           style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.72103006;stroke-opacity:1"
+           id="rect4712"
+           width="591.70758"
+           height="218.24846"
+           x="-1635.9154"
+           y="-187.73738"
+           ry="3.5104668" />
+        <path
+           style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+           d="m -1635.9429,-143.15336 591.4461,0"
+           id="path4714"
+           inkscape:connector-curvature="0" />
+      </g>
+      <flowRoot
+         transform="translate(389.06282,-403.47471)"
+         style="font-size:40px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Caladea;-inkscape-font-specification:Caladea"
+         id="flowRoot4716"
+         xml:space="preserve"><flowRegion
+           id="flowRegion4718"><rect
+             y="-37.592415"
+             x="-1511.1882"
+             height="49.497482"
+             width="420.22345"
+             id="rect4720" /></flowRegion><flowPara
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Carlito;-inkscape-font-specification:Carlito"
+           id="flowPara4722">Binary File Schema</flowPara></flowRoot>      <flowRoot
+         xml:space="preserve"
+         id="flowRoot4724"
+         style="font-size:40px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Caladea;-inkscape-font-specification:Caladea"
+         transform="translate(442.53742,-333.95823)"><flowRegion
+           id="flowRegion4726"><rect
+             style="text-align:center;text-anchor:middle"
+             id="rect4728"
+             width="203.04068"
+             height="88.89344"
+             x="-1511.1882"
+             y="-37.592415" /></flowRegion><flowPara
+           id="flowPara4732"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;text-anchor:middle;font-family:Carlito;-inkscape-font-specification:Carlito">Binary File </flowPara><flowPara
+           id="flowPara4766"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;text-anchor:middle;font-family:Carlito;-inkscape-font-specification:Carlito">for all trips</flowPara><flowPara
+           id="flowPara4734"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;text-anchor:middle;font-family:Carlito;-inkscape-font-specification:Carlito" /></flowRoot>    </g>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#Arrow1Lend)"
+       d="m -760.0295,-326.49604 109.0965,0"
+       id="path4789"
+       inkscape:connector-curvature="0"
+       inkscape:export-filename="/home/nivan/src/TLCVis/doc/figs/process.png"
+       inkscape:export-xdpi="68.660004"
+       inkscape:export-ydpi="68.660004" />
+    <flowRoot
+       transform="translate(720.42891,-340.4878)"
+       style="font-size:40px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Caladea;-inkscape-font-specification:Caladea"
+       id="flowRoot4791"
+       xml:space="preserve"
+       inkscape:export-filename="/home/nivan/src/TLCVis/doc/figs/process.png"
+       inkscape:export-xdpi="68.660004"
+       inkscape:export-ydpi="68.660004"><flowRegion
+         id="flowRegion4793"><rect
+           y="-37.592415"
+           x="-1511.1882"
+           height="41.24295"
+           width="197.26689"
+           id="rect4795" /></flowRegion><flowPara
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Carlito;-inkscape-font-specification:Carlito"
+         id="flowPara4797">build_kdtrip</flowPara></flowRoot>    <g
+       id="g4799"
+       transform="translate(548,0)"
+       inkscape:export-filename="/home/nivan/src/TLCVis/doc/figs/process.png"
+       inkscape:export-xdpi="68.660004"
+       inkscape:export-ydpi="68.660004">
+      <g
+         id="g4829">
+        <g
+           transform="matrix(0.56194717,0,0,0.92155548,-212.47997,-268.30135)"
+           id="g4801">
+          <rect
+             style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.72103006;stroke-opacity:1"
+             id="rect4803"
+             width="591.70758"
+             height="218.24846"
+             x="-1635.9154"
+             y="-187.73738"
+             ry="3.5104668" />
+          <path
+             style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+             d="m -1635.9429,-143.15336 591.4461,0"
+             id="path4805"
+             inkscape:connector-curvature="0" />
+        </g>
+        <flowRoot
+           transform="translate(412.11946,-403.47471)"
+           style="font-size:40px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Caladea;-inkscape-font-specification:Caladea"
+           id="flowRoot4807"
+           xml:space="preserve"><flowRegion
+             id="flowRegion4809"><rect
+               y="-37.592415"
+               x="-1511.1882"
+               height="49.497482"
+               width="420.22345"
+               id="rect4811" /></flowRegion><flowPara
+             style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Carlito;-inkscape-font-specification:Carlito"
+             id="flowPara4813">KdTrip Index File</flowPara></flowRoot>        <flowRoot
+           xml:space="preserve"
+           id="flowRoot4815"
+           style="font-size:40px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Caladea;-inkscape-font-specification:Caladea"
+           transform="translate(408.39875,-333.95823)"><flowRegion
+             id="flowRegion4817"><rect
+               style="text-align:center;text-anchor:middle"
+               id="rect4819"
+               width="271.73102"
+               height="88.89344"
+               x="-1511.1882"
+               y="-37.592415" /></flowRegion><flowPara
+             id="flowPara4823"
+             style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;text-anchor:middle;font-family:Carlito;-inkscape-font-specification:Carlito">File to be loaded in TaxiVis</flowPara><flowPara
+             id="flowPara4825"
+             style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;text-anchor:middle;font-family:Carlito;-inkscape-font-specification:Carlito" /></flowRoot>      </g>
+    </g>
+    <flowRoot
+       transform="matrix(0.74951077,0,0,0.74951077,-200.22795,-284.88083)"
+       style="font-size:40px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Caladea;-inkscape-font-specification:Caladea"
+       id="flowRoot5003"
+       xml:space="preserve"
+       inkscape:export-xdpi="68.660004"
+       inkscape:export-ydpi="68.660004"
+       inkscape:export-filename="/home/nivan/src/TLCVis/doc/figs/process.png"><flowRegion
+         id="flowRegion5005"><rect
+           y="-37.592415"
+           x="-1511.1882"
+           height="36.957237"
+           width="267.31406"
+           id="rect5007" /></flowRegion><flowPara
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Carlito;-inkscape-font-specification:Carlito"
+         id="flowPara5009">multiCsv2Binary</flowPara></flowRoot>  </g>
+</svg>

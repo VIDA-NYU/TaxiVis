@@ -1,0 +1,30 @@
+<RCC>
+    <qresource prefix="/">
+        <file>Resources/icons/dropoff.png</file>
+        <file>Resources/icons/pickup.png</file>
+        <file>Resources/icons/link.png</file>
+        <file>Resources/icons/map.png</file>
+        <file>Resources/icons/pickup_dropoff.png</file>
+        <file>Resources/icons/animation.png</file>
+        <file>Resources/icons/sync.color.png</file>
+        <file>Resources/icons/sync.gray.png</file>
+        <file>Resources/icons/merge.png</file>
+        <file>Resources/icons/unmerge.png</file>
+        <file>Resources/icons/play.png</file>
+        <file>Resources/icons/pause.png</file>
+        <file>Resources/icons/reset.png</file>
+        <file>Resources/icons/config.png</file>
+        <file>Resources/icons/config_on.png</file>
+        <file>Resources/icons/time.png</file>
+        <file>Resources/icons/time_on.png</file>
+        <file>Resources/icons/export.png</file>
+        <file>Resources/icons/explore.png</file>
+
+        <file>Resources/shaders/paths.120.vert</file>
+        <file>Resources/shaders/paths.120.geom</file>
+        <file>Resources/shaders/paths.120.frag</file>
+
+        <file>Resources/shaders/location.120.vert</file>
+        <file>Resources/shaders/geo2screen.120.vert</file>
+    </qresource>
+</RCC>
