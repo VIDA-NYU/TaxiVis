@@ -8,7 +8,6 @@ using namespace std;
 QueryManager::QueryManager(){
     //create KDTrip
     std::string fname = string(DATA_DIR)+"sample_merged_1.kdtrip";
-    fname = "/home/nivan/src/TaxiVis/src/preprocess/build/myTest.kdtrip";
     kdtrip = new KdTrip(fname);
 }
 
