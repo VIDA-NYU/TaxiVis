@@ -70,7 +70,7 @@ void TripLocationLOD::buildLocations()
   this->dataReady = true;
 }
 
-#define USE_VBO 0
+#define USE_VBO 1
 
 void TripLocationLOD::renderGL()
 {
