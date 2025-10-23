@@ -576,6 +576,12 @@ void QMapTileWidget::paint(QPainter *painter, const QStyleOptionGraphicsItem *op
   Q_UNUSED(option);
   Q_UNUSED(widget);
 
+  static bool firstPaint = true;
+  if (firstPaint) {
+    qDebug() << "First paint: size=" << this->size() << "mapEnabled=" << this->showMapEnabled;
+    firstPaint = false;
+  }
+
   this->initGL();
 
   if (this->showMapEnabled) {

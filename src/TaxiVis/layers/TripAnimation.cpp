@@ -77,8 +77,9 @@ void TripAnimation::setEnabled(bool r)
     else {
       this->stop();
       this->showConfig(false);
+      this->progress->hide();
     }
-    
+
     this->toolBar->setVisible(this->enabled);
   }
 }

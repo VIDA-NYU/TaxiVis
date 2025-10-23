@@ -64,6 +64,11 @@ GeographicalViewWidget::GeographicalViewWidget(QWidget *parent) :
     this->layerAnimation = new TripAnimation(this);
     this->mapView()->addRenderingLayer(this->layerAnimation);
     this->connect(this, SIGNAL(datasetUpdated()), this->layerAnimation, SLOT(updateData()));
+
+    // Disable animation layer by default on macOS (geometry shaders not supported)
+#ifdef Q_OS_MAC
+    this->layerAnimation->setEnabled(false);
+#endif
     
     //
     this->colorbar = new ColorBar;

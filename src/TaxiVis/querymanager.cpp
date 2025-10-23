@@ -185,7 +185,7 @@ void QueryManager::queryData(SelectionGraph *queryGraph, QDateTime startDateTime
 
         KdTrip::QueryResult result = kdtrip->execute(query);
         KdTrip::QueryResult::iterator it;
-        qDebug() << "Result " << result.size() ;
+        //qDebug() << "Result " << result.size() ;
         for (it=result.begin(); it<result.end(); ++it) {
             const KdTrip::Trip *trip = it.trip();
 
