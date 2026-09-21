@@ -4,3 +4,6 @@ build/
 data/*.csv
 data/*.trip
 data/*.kdtrip
+
+# macOS Finder metadata
+.DS_Store

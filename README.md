@@ -114,6 +114,8 @@ well under a second and the process stays small until you query it.
 
 ### 2.3 Available Features
 
+A walkthrough of the interface with screenshots is in [doc/usage.md](doc/usage.md).
+
 - **Geographic Map View** - OpenStreetMap tile-based visualization with pan/zoom
   - Three-tier caching: memory → disk → network
   - Persistent tile cache at `~/Library/Caches/TaxiVis/tiles` (macOS) or `~/.cache/TaxiVis/tiles` (Linux)
