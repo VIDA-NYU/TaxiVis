@@ -15,8 +15,7 @@ int main(int argc, char *argv[])
     qCritical() << "Unable to load TaxiVis data:" << error.what();
     return 1;
   }
-  MainWindow w;
-  w.resize(1280, 800);
+  MainWindow w; // sizes and centres itself relative to the available screen
   w.show();
   return a.exec();
 }

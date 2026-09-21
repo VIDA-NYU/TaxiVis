@@ -947,24 +947,6 @@ void GeographicalViewWidget::notifyCoordinatorViewChanged(){
     }
 }
 
-void GeographicalViewWidget::notifyCoordinatorStepBack(){
-    if (this->coordinator && this->coordinator->containsMapView(this->mapView())) {
-        foreach(GeographicalViewWidget *widget, this->coordinator->linkedMapWidgets()) {
-            if(widget != this)
-                emit widget->stepBack();
-        }
-    }
-}
-
-void GeographicalViewWidget::notifyCoordinatorStepForward(){
-    if (this->coordinator && this->coordinator->containsMapView(this->mapView())) {
-        foreach(GeographicalViewWidget *widget, this->coordinator->linkedMapWidgets()) {
-            if(widget != this)
-                emit widget->stepForward();
-        }
-    }
-}
-
 void GeographicalViewWidget::notifyCoordinatorExportSelection(){
     cout << "Export Selection" << endl;
     if (this->coordinator && this->coordinator->containsMapView(this->mapView())) {
@@ -1029,14 +1011,14 @@ void GeographicalViewWidget::keyPressEvent(QKeyEvent *event)
         break;
     case Qt::Key_Left:
         //cout << "Step Back" << endl;
+        // Linked views step when notifyCoordinatorKeyPress() forwards this key
+        // below; notifying them here as well made them advance twice.
         emit stepBack();
-        notifyCoordinatorStepBack();
         redirect = false;
         break;
     case Qt::Key_Right:
         //cout << "Step Forward" << endl;
         emit stepForward();
-        notifyCoordinatorStepForward();
         redirect = false;
         break;
     case Qt::Key_E:

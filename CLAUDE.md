@@ -145,7 +145,12 @@ Dataset resolution: `TAXIVIS_DATA`, then `data/2012_merged.kdtrip`, then the bun
 sample. A local full January dataset is available at
 `~/data/FOIL2013/processed/2013_01.kdtrip`; keep large datasets outside Git.
 
-Qt 6 interactive verification is still in progress; track it in `PLAN.md`.
+Qt 6 interactive verification is done by `native_interaction_check`
+(`tests/native_interaction_check.cpp`): it drives the real window with in-process
+Qt events and saves window grabs. It needs a display, GL and (on macOS) the
+screen-recording permission, so it is a manual target, not a CTest case. Results
+and the open merge decision are in `PLAN.md`. `make_figures` uses the same
+approach to regenerate every screenshot under `doc/figs` (see `doc/figures.md`).
 
 ### Background computation
 

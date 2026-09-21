@@ -1,5 +1,5 @@
 #include "geographicalviewwidget.h"
-#include "ViewWidget.h"
+#include "viewwidget.h"
 #include "QMapTileWidget.hpp"
 #include "temporalseriesplotwidget.h"
 #include "histogramwidget.h"

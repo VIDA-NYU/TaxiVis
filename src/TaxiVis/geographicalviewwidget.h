@@ -79,8 +79,6 @@ private:
     void         pickEdge(SelectionGraphEdge*&,QPointF);
 
     void         notifyCoordinatorViewChanged();
-    void         notifyCoordinatorStepBack();
-    void         notifyCoordinatorStepForward();
     void         notifyCoordinatorExportSelection();
     void         notifyCoordinatorKeyPress(QKeyEvent *event);
 

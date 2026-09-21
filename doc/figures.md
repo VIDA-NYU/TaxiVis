@@ -2,9 +2,16 @@
 
 The figures in the TVCG 2014 paper (*Visual Exploration of Big Spatio-Temporal
 Urban Data: A Study of New York City Taxi Trips*) were made with 2011 and 2012
-data. This page shows how far the current Qt5 build gets with the January 2013
+data. This page shows how far the current Qt 6 build gets with the January 2013
 TLC data (14.8 million trips), using only the interactive interface. Every image
 below is an unedited window capture.
+
+The captures are produced by `make_figures` (`tests/make_figures.cpp`), which
+drives the real window with the gestures described under each figure and writes
+both this set and the usage-guide screenshots:
+
+    TZ=America/New_York TAXIVIS_DATA=~/data/FOIL2013/processed/2013_01.kdtrip \
+        build/src/TaxiVis/make_figures doc/figs
 
 ## Taxis as sensors: hourly point clouds (paper Fig. 2)
 
@@ -28,11 +35,13 @@ Midtown, orange the Upper East Side, blue Harlem and upper Manhattan.
 
 ![Neighborhoods over a week](figs/paper/neighborhoods_week.png)
 
-The same pattern as in the paper appears: Midtown and Lower Manhattan dominate
-on weekdays, Lower Manhattan surges on the Friday and Saturday nights of
-January 4 and 5, and the two uptown regions stay an order of magnitude lower.
-The regions are approximate, drawn freehand at zoom 12 where Manhattan is
-about 150 points wide.
+The same pattern as in the paper appears: Midtown dominates on weekdays with a
+clear daily rhythm, Lower Manhattan (here everything below 14th Street) surges
+on the Friday and Saturday nights of January 4 and 5, the Upper East Side
+follows the weekday rhythm at a lower level, and Harlem stays an order of
+magnitude lower. The regions are approximate quadrilaterals drawn at zoom 12,
+where Manhattan is about 150 points wide; the map crops the two ends, but the
+query uses the whole polygons.
 
 How: choose the pickup type, Option + right-click to place polygon vertices,
 close each polygon on its first vertex. Set End to 01/08/13 00:00 and Start
@@ -77,7 +86,11 @@ level 11. The colour bar reads average rides per hour per cell.
 The Explore button next to the time controls splits the query window into
 steps of the chosen step size and opens a dialog with one heat map per step
 and the corresponding curves overlaid in the plots. Here: two one-day steps
-starting January 1st, all maps at the main view's position and zoom.
+starting January 1st, all maps at the main view's position and zoom. The
+curves are aligned on the first step's time axis: New Year's Day (blue) starts
+with the post-midnight peak, while Wednesday January 2nd (orange) starts quiet
+and has a morning rush. The dialog's splitter was dragged to an even split so
+the colour bar fits.
 
 ![Time exploration](figs/paper/time_exploration.png)
 

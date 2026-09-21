@@ -47,8 +47,17 @@ ViewWidget::ViewWidget(QWidget *parent) :
     ui->histogramWidget->recomputePlots();
 
     //
-    ui->splitter->setStretchFactor(0, 1);
-    ui->splitter->setStretchFactor(1, 2);
+    // The plot tabs have no size hint of their own, so the splitter used to
+    // squash them to a couple of text rows: the axis collapsed to a line and
+    // the tick labels overlapped. Reserve enough height for the controls row
+    // plus a readable plot, and start from a proportioned split rather than
+    // letting the map claim everything.
+    ui->tabWidget->setMinimumHeight(240);
+    ui->splitter->setSizes({640, 320});
+    // Extra height goes mostly to the map; the plots stay readable but do not
+    // need to grow without bound.
+    ui->splitter->setStretchFactor(0, 3);
+    ui->splitter->setStretchFactor(1, 1);
 
     //
     connect(ui->geographicalView,SIGNAL(datasetUpdated()),this,SLOT(geoWidgetUpdatedData()));

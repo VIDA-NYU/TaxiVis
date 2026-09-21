@@ -7,14 +7,13 @@ Qt 4 → Qt 5 move that is now finished.
 
 ## Current stopping point
 
-Paused for scope review. No code changes are in progress. The implementation and
-passing tests recorded below are historical results, not approval to merge the
-asynchronous changes. The responsiveness review and revised priorities at the
-end of this file supersede the earlier completion claim.
-
-Before merging, resolve the reported shared-QPainterPath thread-safety concern
-where worker use remains, and decide which background operations justify their
-complexity. Passing ASan/UBSan tests does not establish thread safety inside Qt.
+Done. The runtime checklist (step 5) is complete, the screenshots are
+regenerated from the Qt 6 build, and the maintainer decided on 2026-09-21 that
+the Qt 6 branch, including the asynchronous query layer as implemented, is the
+better version and becomes `master` (step 8). The scope question under "Revised
+responsiveness priorities" is thereby settled in favour of keeping the current
+implementation; the measurements there remain the starting point for any future
+responsiveness work (scatter painting first, not more threading).
 
 ## Findings (grep of src/TaxiVis, excluding qcustomplot)
 
@@ -84,22 +83,22 @@ Updated as steps land.
       page size, removed render hints, QWheelEvent::delta/pos, QSet::toList,
       QLocale exponential/positiveSign now QString)
 - [x] 4 clean build against Qt 6.11.2, zero warnings, links Qt6 frameworks
-- [ ] 5 runtime checks (January 2013 data)
+- [x] 5 runtime checks (January 2013 data) — see "Native interaction checks" below
   - [x] window opens, data loads, tiles render, points at the right place
   - [x] wheel zoom
   - [x] heat map lands on the trips
   - [x] rectangle and polygon regions, per-region time series
   - [x] attribute combo boxes connect (no "No such signal" at startup)
-  - [ ] linking, delete, move, freehand
-  - [ ] histogram and scatter tabs, Num Bins
-  - [ ] time exploration and attribute exploration dialogs
-  - [ ] time stepping, step size combo, Query button
-  - [ ] export to CSV
-  - [ ] second map, sync button
-  - [ ] key A no-op
+  - [x] linking, delete, move, freehand
+  - [x] histogram and scatter tabs, Num Bins
+  - [x] time exploration and attribute exploration dialogs
+  - [x] time stepping, step size combo, Query button
+  - [x] export to CSV (code behind the button; the native save dialog is not driven)
+  - [x] second map, sync button
+  - [x] key A no-op
 - [x] 6 preprocess tools build with Qt6
 - [x] 7 docs (Qt 6 setup, tests, 56-byte binary layout, startup validation)
-- [ ] 8 merge
+- [x] 8 merge (`master` fast-forwarded to `qt6`, 2026-09-21)
 
 ## Repository review fixes (2026-09-21)
 
@@ -419,8 +418,8 @@ plan update.
 
 Required before treating the asynchronous implementation as merge-ready:
 
-- [ ] Agree on the smaller scope to retain or simplify. **This is the one open
-      item and it is a judgement call, not a measurement.** The evidence now
+- [x] Agree on the smaller scope to retain or simplify. **Decided 2026-09-21:
+      keep the implementation as is.** This was a judgement call, not a measurement. The evidence now
       says threading addresses ~20% of the worst-case interaction cost while
       painting accounts for the rest; the code is written, tested, and no longer
       carries the known race. Retaining it is defensible; so is reverting plot
@@ -442,3 +441,48 @@ plot aggregation, sorting, heat-map preparation, or rendering costs. Its blanket
 20–30 ms conclusion for those operations is therefore not established. Conversely,
 the asynchronous implementation's passing tests do not demonstrate that its
 additional complexity produces a worthwhile user-visible improvement.
+
+## Native interaction checks (2026-09-21)
+
+`tests/native_interaction_check.cpp` (target `native_interaction_check`, not a
+CTest case because it needs a display and OpenGL) runs the real `MainWindow` on
+the host platform and drives it with in-process Qt events, so it neither needs
+an accessibility tool nor moves the user's cursor. Every step asserts on
+application state (selection graph, committed trip set versus a synchronous
+reference query, widget values) and saves a window-system grab of the native
+window. `QWidget::grab()` and `QOpenGLWidget::grabFramebuffer()` both return a
+blank map because the scene paints natively into the viewport, so the grabs use
+`QScreen::grabWindow` (needs the macOS screen-recording permission).
+
+    TAXIVIS_DATA=~/data/FOIL2013/processed/2013_01.kdtrip \
+        build/src/TaxiVis/native_interaction_check out-dir
+
+Result: 17/17 pass on the full January index and on the bundled sample. Covered:
+Query button; rectangle (geometry matches the dragged corners), freehand, move,
+link, Ctrl-click delete (edge removed with its node); histogram/scatter/time
+series tabs and typed Num Bins edits; step buttons with 1 hour and 15 min step
+sizes; arrow-key stepping from the map; key A no-op on macOS; CSV export row
+count; both attribute exploration dialogs; time exploration (two cells);
+Views > New Map with sync (zoom, centre and time follow). Grabs were inspected:
+regions, link arrow, pickup/dropoff points, exploration heat maps and the linked
+second map all render in the right place.
+
+Found and fixed along the way:
+
+- Linked views advanced **two** steps per arrow key: the key handler notified
+  linked widgets explicitly and then forwarded the same key event to them. The
+  explicit notification (`notifyCoordinatorStepBack/Forward`) is removed. This
+  dates from 2015 and is not a Qt 6 regression.
+- `main.cpp` resized the window to 1280x800 after the constructor, overriding
+  the new screen-relative size and leaving the centring computed for the wrong
+  size. The override is removed. The splitter now reserves a readable plot
+  panel (minimum height, 2:1 initial split).
+- `responsiveness_regression.cpp` included `ViewWidget.h`; the file is
+  `viewwidget.h`, which only worked on a case-insensitive filesystem.
+
+Noticed, not changed: the step *buttons* are per-view by design (only the map's
+arrow keys propagate to linked views); linked views share a time-series y range,
+so a small selection looks flat next to a large one; with two maps on a
+1512-point-wide display the views' minimum widths slightly exceed the window;
+the colour-bar label is clipped in short exploration cells.
+

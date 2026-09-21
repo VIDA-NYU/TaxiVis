@@ -164,6 +164,12 @@ if(BUILD_TESTING)
     # Measurement aid for the responsiveness scope decision; not a CTest case.
     add_executable(interaction_bench ../../tests/interaction_bench.cpp ${RESOURCES})
     target_link_libraries(interaction_bench PRIVATE taxivis_widgets Qt6::Test)
+    # Drives the real window with a live GL viewport; needs a display, so not a CTest case.
+    add_executable(native_interaction_check ../../tests/native_interaction_check.cpp ${RESOURCES})
+    target_link_libraries(native_interaction_check PRIVATE taxivis_widgets Qt6::Test)
+    # Regenerates doc/figs from the running application; same requirements.
+    add_executable(make_figures ../../tests/make_figures.cpp ${RESOURCES})
+    target_link_libraries(make_figures PRIVATE taxivis_widgets Qt6::Test)
     add_test(NAME plot_regression COMMAND plot_regression)
     set_tests_properties(plot_regression PROPERTIES ENVIRONMENT
         "QT_QPA_PLATFORM=offscreen;TAXIVIS_DATA=${CMAKE_CURRENT_SOURCE_DIR}/../../data/sample_merged_1.kdtrip;TZ=America/New_York")
