@@ -123,14 +123,17 @@ A walkthrough of the interface with screenshots is in [doc/usage.md](doc/usage.m
 - **Temporal Series Plots** - Visualize trip metrics over time (fare, distance, duration, etc.)
 - **Histograms** - Distribution analysis of trip attributes
 - **Scatter Plots** - Correlation analysis between variables
-- **Selection Graphs** - Define spatial/temporal query regions
+- **Selection Graphs** - Define spatial/temporal query regions (rectangle, polygon, freehand) and link them for origin-to-destination queries; each region or link gets its own color in the plots
+- **Heat Map Layer** - Density of pickups or dropoffs for the current query (key 1)
+- **Time Exploration** - Split the query window into steps and compare them side by side, one map per step (Explore button in the time controls)
+- **Attribute Exploration** - Plot every attribute of the current selection at once (Explore button on the toolbar)
 - **Color Scales** - Multiple color schemes for data visualization
 - **Data Export** - Query and export trip subsets
 
 ### 2.4 Known Limitations
 
-- **Animated Trip Paths (TripAnimation)** - Disabled on macOS due to geometry shader compatibility issues
-  - Alternative: Use TripLocation layer to visualize pickup/dropoff points
+- **Animated Trip Paths (TripAnimation)** - Unavailable on macOS: the layer needs a geometry shader, which the compatibility OpenGL profile used by the renderer does not provide. Toggling it (key A, toolbar button) does nothing there; pickup/dropoff points stay visible.
+- **Grid Map layers** (keys 3 and 4) - Present but not verified in the current build
 - **File → Open Dialog** - Not yet implemented; choose the dataset with `TAXIVIS_DATA` (see [Section 2.1](#21-choosing-a-dataset))
 
 ## 3. Data Preprocessing
