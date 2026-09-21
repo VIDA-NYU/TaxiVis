@@ -233,6 +233,13 @@ void HeatMap::initGL()
 void HeatMap::buildHeatMapTexture()
 {
   glPushAttrib(GL_ALL_ATTRIB_BITS);
+  // This runs inside QPainter::beginNativePainting(), where Qt has loaded
+  // the painter's transform (including the device pixel ratio) into the
+  // modelview matrix. The splat pass below works in texel units of the
+  // FBO, so both matrices must be reset for it and restored afterwards.
+  glMatrixMode(GL_MODELVIEW);
+  glPushMatrix();
+  glLoadIdentity();
   glMatrixMode(GL_PROJECTION);
   glPushMatrix();
   int width = this->fbo->size().width();
@@ -270,6 +277,8 @@ void HeatMap::buildHeatMapTexture()
 
   QImage img = this->fbo->toImage();
   this->fbo->release();
+  glPopMatrix();
+  glMatrixMode(GL_MODELVIEW);
   glPopMatrix();
   glPopAttrib();
 

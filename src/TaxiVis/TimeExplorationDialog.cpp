@@ -1,6 +1,6 @@
 #include "TimeExplorationDialog.hpp"
 #include "ui_TimeExplorationDialog.h"
-#include "QMapView.hpp"
+#include "QMapTileWidget.hpp"
 #include "coordinator.h"
 #include "layers/HeatMap.hpp"
 #include "GroupRepository.h"
@@ -68,6 +68,12 @@ void TimeExplorationDialog::setPlotSelection(QDateTime startTime, QDateTime endT
   this->ui->histogramWidget->setSelectedTripsRepository(inTrips);
   this->ui->histogramWidget->setSelectionGraph(graph);
   this->ui->histogramWidget->recomputePlots();
+}
+
+void TimeExplorationDialog::setMapView(QPointF center, int zoomLevel)
+{
+  for (int i=0; i<this->geoWidgets.count(); i++)
+    this->geoWidgets.at(i)->mapView()->setView(center, zoomLevel);
 }
 
 void TimeExplorationDialog::maxValueUpdated(float value)

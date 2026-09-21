@@ -65,10 +65,9 @@ GeographicalViewWidget::GeographicalViewWidget(QWidget *parent) :
     this->mapView()->addRenderingLayer(this->layerAnimation);
     this->connect(this, SIGNAL(datasetUpdated()), this->layerAnimation, SLOT(updateData()));
 
-    // Disable animation layer by default on macOS (geometry shaders not supported)
-#ifdef Q_OS_MAC
+    // The animation layer stays off where its geometry shader is not
+    // available (macOS); TripAnimation::setEnabled() enforces this.
     this->layerAnimation->setEnabled(false);
-#endif
     
     //
     this->colorbar = new ColorBar;
@@ -253,7 +252,9 @@ void GeographicalViewWidget::setQueryDescription(const QStringList &desc)
 void GeographicalViewWidget::setAnimationEnabled(bool b)
 {
     this->layerAnimation->setEnabled(b);
-    this->layerLocation->setEnabled(!b);
+    // setEnabled() refuses when the animation is unsupported; follow its
+    // actual state so the point layer is never hidden for nothing.
+    this->layerLocation->setEnabled(!this->layerAnimation->isEnabled());
 }
 
 void GeographicalViewWidget::loadFinished(){
@@ -756,9 +757,20 @@ void GeographicalViewWidget::mouseReleaseEvent(QMouseEvent *event){
 
         //
         if (tailNode!=NULL && headNode != NULL) {
+            // Group (colour) of the new directional query:
+            //  - joining a destination that is already part of a linked
+            //    query extends that query's group;
+            //  - the first link out of a region shares the region's group
+            //    (region + arrow form one complex query, as in the paper);
+            //  - further links out of the same region get their own group
+            //    so that destinations can be told apart in the plots
+            //    (e.g. Lower Manhattan to JFK vs. to LaGuardia).
             Group newGroup;
             if (headNode->inDegree()!=0 || headNode->outDegree()!=0){
                 newGroup = headNode->getGroup();
+            }
+            else if (tailNode->outDegree()!=0 || tailNode->inDegree()!=0){
+                newGroup = getAvailableGroup();
             }
             else{
                 newGroup = tailNode->getGroup();

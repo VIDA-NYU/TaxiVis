@@ -12,9 +12,9 @@ add_definitions(-DDATA_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/../../data/\")
 
 # Project files
 set(QT_HEADERS
-#    HistogramDialog.hpp
-#    TemporalSeriesDialog.hpp
-#    TimeExplorationDialog.hpp
+    HistogramDialog.hpp
+    TemporalSeriesDialog.hpp
+    TimeExplorationDialog.hpp
     QMapTileWidget.hpp
     QMapWidget.hpp
     coordinator.h
@@ -38,9 +38,9 @@ set(QT_HEADERS
 )
 
 set(FORMS
-#    HistogramDialog.ui
-#    TemporalSeriesDialog.ui
-#    TimeExplorationDialog.ui
+    HistogramDialog.ui
+    TemporalSeriesDialog.ui
+    TimeExplorationDialog.ui
     histogramwidget.ui
     layers/TripAnimationConfig.ui
     layers/TripAnimationToolBar.ui
@@ -53,9 +53,9 @@ set(FORMS
 )
 
 set(SOURCES
-#    HistogramDialog.cpp
-#    TemporalSeriesDialog.cpp
-#    TimeExplorationDialog.cpp
+    HistogramDialog.cpp
+    TemporalSeriesDialog.cpp
+    TimeExplorationDialog.cpp
     Group.cpp
     GroupRepository.cpp
     QMapTileWidget.cpp
@@ -102,7 +102,6 @@ set(SOURCES
     util/yellowtobrownscale.cpp
     viewwidget.cpp
     timewidget.cpp
-#    timeanalysiswidget.cpp
 )
 set(RESOURCES resources.qrc)
 

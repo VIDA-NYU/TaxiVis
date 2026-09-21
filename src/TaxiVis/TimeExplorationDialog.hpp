@@ -17,6 +17,7 @@ public:
 
   void addGeoWidget(QDateTime startTime, QDateTime endTime, SelectionGraph *graph, const KdTrip::TripSet &trips);
   void setPlotSelection(QDateTime startTime, QDateTime endTime, SelectionGraph *graph, KdTrip::TripSet *trips);
+  void setMapView(QPointF center, int zoomLevel);
 
 private:
   Ui::TimeExplorationDialog *ui;

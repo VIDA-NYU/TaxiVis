@@ -20,13 +20,6 @@ cmake ../
 make
 ```
 
-Alternative build with QMake:
-```bash
-cd src/TaxiVis
-qmake
-make
-```
-
 ### Building Preprocessing Tools
 
 Data preprocessing utilities are built separately:

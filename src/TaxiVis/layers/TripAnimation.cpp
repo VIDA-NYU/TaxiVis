@@ -68,8 +68,18 @@ TripAnimation::~TripAnimation()
   delete this->uiToolBar;
 }
 
+bool TripAnimation::isSupported() const
+{
+  // The animated paths need the geometry shader loaded in initGL(). It is
+  // not loaded on macOS (no geometry shaders in the compatibility profile
+  // the rest of the renderer requires), so the layer cannot be enabled.
+  return !this->shaders.empty();
+}
+
 void TripAnimation::setEnabled(bool r)
 {
+  if (r && !this->isSupported())
+    r = false;
   if (this->enabled!=r) {
     this->enabled = r;
 
@@ -206,7 +216,7 @@ void TripAnimation::render(QPainter *painter)
 
 void TripAnimation::renderGL()
 {
-  if (this->enabled && this->pathDataReady) {
+  if (this->enabled && this->pathDataReady && this->isSupported()) {
     if (this->pathBufferDirty) {
       this->updatePathBuffers();
       this->pathBufferDirty = false;

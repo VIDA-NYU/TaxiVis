@@ -153,7 +153,7 @@ From top to bottom:
 7. Show or hide the map tiles
 8. Show trip animation for the current selection
 9. Export the selected trips to CSV
-10. Explore: plot every attribute of the current selection (disabled in the current Qt5 build)
+10. Explore: plot every attribute of the current selection (time series or histograms, depending on the active tab)
 
 ## 9. Keyboard shortcuts
 
@@ -179,8 +179,8 @@ The map must have focus (click it first).
 
 - The bundled sample dataset covers essentially one day (2013-01-13), so the
   time series will show a single spike. Use a full month for real exploration.
-- Trip animation (toolbar button 8, key A) is disabled on macOS because it
-  depends on geometry shaders.
+- Trip animation (toolbar button 8, key A) is unavailable on macOS because it
+  depends on geometry shaders. Toggling it there does nothing.
 - Times are shown in the machine's local time zone. Data processed with the
   Julia pipeline is interpreted the same way, so wall-clock times match the
   raw CSV files when both steps run in Eastern time.

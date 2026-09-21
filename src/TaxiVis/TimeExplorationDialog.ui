@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Paremeter Exploration In Time</string>
+   <string>Parameter Exploration In Time</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <property name="spacing">

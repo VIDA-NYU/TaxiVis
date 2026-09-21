@@ -114,7 +114,7 @@ well under a second and the process stays small until you query it.
 
 ### 2.3 Available Features
 
-A walkthrough of the interface with screenshots is in [doc/usage.md](doc/usage.md).
+A walkthrough of the interface with screenshots is in [doc/usage.md](doc/usage.md), and [doc/figures.md](doc/figures.md) reproduces several figures from the TaxiVis paper with the 2013 data.
 
 - **Geographic Map View** - OpenStreetMap tile-based visualization with pan/zoom
   - Three-tier caching: memory → disk → network

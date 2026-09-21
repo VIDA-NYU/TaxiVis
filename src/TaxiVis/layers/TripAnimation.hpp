@@ -24,6 +24,7 @@ public:
 
   void initGL();
   void setEnabled(bool r);
+  bool isSupported() const;
   void render(QPainter *painter);
 
   bool isPlaying();
