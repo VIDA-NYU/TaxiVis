@@ -4,42 +4,37 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-TaxiVis (also referred to as TLCVis) is a Qt4-based visual analytics application for exploring NYC taxi trip data. The application provides interactive visualization of taxi trips using OpenGL rendering, with support for spatial and temporal queries.
+TaxiVis (also referred to as TLCVis) is a Qt6-based visual analytics application for exploring NYC taxi trip data. The application provides interactive visualization of taxi trips using OpenGL rendering, with support for spatial and temporal queries.
 
 ## Build System
 
 ### Building the Main Application
 
-The project uses CMake (minimum 2.6) as its primary build system:
+The project uses CMake (minimum 3.16) as its primary build system:
 
 ```bash
-cd src/TaxiVis
-mkdir build
-cd build
-cmake ../
-make
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/opt/homebrew/opt/qt
+cmake --build build -j4
+ctest --test-dir build --output-on-failure
 ```
 
-### Building Preprocessing Tools
+The root build includes the GUI, preprocessing tools, and CTest regression suite.
+Python 3 is required for tests; use `-DBUILD_TESTING=OFF` to omit them.
+Use the Qt prefix appropriate to the host. Generated build directories are ignored.
 
-Data preprocessing utilities are built separately:
+### Preprocessing Tools
 
-```bash
-cd src/preprocess
-mkdir build
-cd build
-cmake ../
-make
-```
-
-This generates executables: `csv2Binary`, `newFormatCsv2Binary`, `multiCsv2Binary`, `build_kdtrip`, `sampling`, `testQuery`, `unif96_to_bin`.
+Executables: `csv2Binary`, `newFormatCsv2Binary`, `multiCsv2Binary`,
+`build_kdtrip`, `sampling`, `testQuery`, `unif96_to_bin`.
+`kdtrip_check` is built when testing is enabled and compares indexed results
+against brute-force filtering. Julia scripts require CSV and DataFrames.
 
 ### Dependencies
 
-- CMake (2.6+)
-- Qt 4 (4.8.5+) with QtWebkit and QtOpenGL
-- OpenGL/GLEW (1.10.0-3+)
-- Boost (1.42+): system, iostreams, filesystem, timer components
+- CMake (3.16+)
+- Qt 6: Core, Gui, Widgets, OpenGL, OpenGLWidgets, Network, PrintSupport
+- OpenGL/GLEW (2.2+)
+- Boost (1.42+): iostreams, filesystem, timer components
 
 ## Data Management
 
@@ -51,7 +46,7 @@ This generates executables: `csv2Binary`, `newFormatCsv2Binary`, `multiCsv2Binar
 
 ### Data Preprocessing
 
-The `src/preprocess/` directory contains tools to index raw taxi CSV data into the `.kdtrip` binary format used by TaxiVis. See `doc/data_import.pdf` for preprocessing instructions.
+The `src/preprocess/` directory contains tools to index raw taxi CSV data into the `.kdtrip` binary format used by TaxiVis. See `README.md` and `doc/data_import.md` for preprocessing instructions.
 
 ## Architecture
 
@@ -60,7 +55,9 @@ The `src/preprocess/` directory contains tools to index raw taxi CSV data into t
 **KdTrip** ([KdTrip.hpp](src/TaxiVis/KdTrip.hpp))
 - Central data structure for taxi trip storage and spatial queries
 - Uses memory-mapped files (Boost iostreams) for efficient data access
-- `Trip` struct contains pickup/dropoff times, locations, fare, distance, taxi ID, payment info
+- `Trip` is 56 bytes: times and coordinates, four uint32 custom fields, then taxi ID, distance, monetary fields, payment code, and passengers
+- Loading validates the node layout and gathers statistics in one pass
+- Inclusive queries must visit both subtrees when a bound equals the split median
 - `Query` struct supports range queries on time, location, and taxi ID
 - `TripSet` uses boost::unordered_set for query results
 
@@ -116,13 +113,17 @@ The `src/preprocess/` directory contains tools to index raw taxi CSV data into t
 
 Qt-based widgets in `src/TaxiVis/`:
 - **GeographicalViewWidget**: Map-based geographic visualizations
-- **QMapView** / **QMapWidget**: Web-based map tile integration
+- **QMapTileWidget** / **QMapWidget**: Native OpenStreetMap tile integration with memory/disk caching and Qt Network downloads
 - **HistogramWidget**: Statistical distributions
 - **TemporalSeriesPlotWidget**: Time-series plotting
 - **ScatterPlotWidget**: Correlation analysis
 - **TimeSelectionWidget** / **TimeWidget**: Temporal navigation controls
 
-All widgets use `qcustomplot` library for plotting functionality.
+Statistical plot widgets use the vendored QCustomPlot 2.1.1.
+See `src/TaxiVis/third_party/QCustomPlot.md` for provenance and the narrow
+QtPrintSupport include patch. Keep application adapters outside the vendor code.
+`plot_regression` tests production widgets offscreen using Qt6 Test;
+`taxivis_widgets` is shared by the GUI and this test target.
 
 ### Color Scales
 
@@ -135,8 +136,26 @@ Extensive color scale library in `src/TaxiVis/util/`:
 ## Running the Application
 
 ```bash
-cd src/TaxiVis/build
-./TaxiVis
+TAXIVIS_DATA=/path/to/data.kdtrip ./build/src/TaxiVis/TaxiVis
 ```
 
 The application loads the indexed trip data from the configured `DATA_DIR` and launches the Qt GUI with interactive map, temporal, and statistical views.
+
+Dataset resolution: `TAXIVIS_DATA`, then `data/2012_merged.kdtrip`, then the bundled
+sample. A local full January dataset is available at
+`~/data/FOIL2013/processed/2013_01.kdtrip`; keep large datasets outside Git.
+
+Qt 6 interactive verification is still in progress; track it in `PLAN.md`.
+
+### Background computation
+
+`AsyncTask.hpp` provides the GUI-owned latest-request controller (one active and
+one pending task, cooperative cancellation, context-bound result delivery).
+Workers must capture values only, never widgets or mutable SelectionGraph nodes.
+`SelectionSnapshot.hpp` flattens geometry into value constraints; `KdTrip::TripSet`
+shares immutable pointer storage and retains mapped/synthetic record owners.
+Queries, plot aggregation/sorting, layers, exploration, and CSV serialization use
+these snapshots. GUI/GL work stays on the main thread. CSV publication happens on
+the GUI thread after cancellation checking; QSaveFile avoids partial destination
+files. Attribute dialogs use owned snapshots and revision guards. Keep the
+`responsiveness_regression` CTest suite current when changing these lifetimes.

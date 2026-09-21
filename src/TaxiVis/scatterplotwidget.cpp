@@ -46,24 +46,24 @@ void ScatterPlotWidget::mousePress(){
     // if an axis is selected, only allow the direction of that axis to be dragged
     // if no axis is selected, both directions may be dragged
 
-    if (ui->customPlot->xAxis->selected().testFlag(QCPAxis::spAxis))
-        ui->customPlot->setRangeDrag(ui->customPlot->xAxis->orientation());
-    else if (ui->customPlot->yAxis->selected().testFlag(QCPAxis::spAxis))
-        ui->customPlot->setRangeDrag(ui->customPlot->yAxis->orientation());
+    if (ui->customPlot->xAxis->selectedParts().testFlag(QCPAxis::spAxis))
+        ui->customPlot->axisRect()->setRangeDrag(ui->customPlot->xAxis->orientation());
+    else if (ui->customPlot->yAxis->selectedParts().testFlag(QCPAxis::spAxis))
+        ui->customPlot->axisRect()->setRangeDrag(ui->customPlot->yAxis->orientation());
     else
-        ui->customPlot->setRangeDrag(Qt::Horizontal|Qt::Vertical);
+        ui->customPlot->axisRect()->setRangeDrag(Qt::Horizontal|Qt::Vertical);
 }
 
 void ScatterPlotWidget::mouseWheel(){
     // if an axis is selected, only allow the direction of that axis to be zoomed
     // if no axis is selected, both directions may be zoomed
 
-    if (ui->customPlot->xAxis->selected().testFlag(QCPAxis::spAxis))
-        ui->customPlot->setRangeZoom(ui->customPlot->xAxis->orientation());
-    else if (ui->customPlot->yAxis->selected().testFlag(QCPAxis::spAxis))
-        ui->customPlot->setRangeZoom(ui->customPlot->yAxis->orientation());
+    if (ui->customPlot->xAxis->selectedParts().testFlag(QCPAxis::spAxis))
+        ui->customPlot->axisRect()->setRangeZoom(ui->customPlot->xAxis->orientation());
+    else if (ui->customPlot->yAxis->selectedParts().testFlag(QCPAxis::spAxis))
+        ui->customPlot->axisRect()->setRangeZoom(ui->customPlot->yAxis->orientation());
     else
-        ui->customPlot->setRangeZoom(Qt::Horizontal|Qt::Vertical);
+        ui->customPlot->axisRect()->setRangeZoom(Qt::Horizontal|Qt::Vertical);
 }
 
 void ScatterPlotWidget::setAttribute1(QString s){
@@ -208,7 +208,7 @@ bool ScatterPlotWidget::tripSatisfiesConstraints(const KdTrip::Trip *trip,
 void ScatterPlotWidget::updatePlot(){
     ui->customPlot->clearGraphs();//clearPlottables();
 
-    if(selectedTrips == NULL)
+    if(suspended || selectedTrips == NULL || selectionGraph == NULL)
         return;
 
     //
@@ -300,161 +300,63 @@ void ScatterPlotWidget::updatePlot(){
         break;
     }
 
-    //
-    bool buildGlobalPlot = (selectionGraph->isEmpty());
-
-    set<Group> groups;
-    map<Group,vector<SelectionGraphNode*> > mapGroupToNodes;
-    map<Group,vector<SelectionGraphEdge*> > mapGroupToEdges;
-    set<Group>::iterator groupIterator;
-    selectionGraph->groupNodesAndEdgeByColor(groups,mapGroupToNodes,mapGroupToEdges);
-    map<Group,QCPGraph*> mapGroupGraph;
-
-    //
-    set<Group> notEmptyGroups;
-    map<Group,vector<SelectionGraphNode*> > tempMapGroupToNodes;
-
-    if(buildGlobalPlot){
-        QPen pen;
-        QCPGraph* graph = ui->customPlot->addGraph();
-        QColor color(0,0,0);
-        mapGroupGraph[Group(color)] = graph;
-        color.setAlphaF(0.05);
-        pen.setColor(color);
-        graph->setPen(pen);
-        graph->setLineStyle(QCPGraph::lsNone);
-        graph->setScatterStyle(QCP::ssDisc);
-        graph->setScatterSize(10);
-    }
-    else{
-        //
-        for(groupIterator = groups.begin() ; groupIterator != groups.end() ; ++groupIterator){
-            vector<SelectionGraphNode*> &groupNodes = mapGroupToNodes[*groupIterator];
-            vector<SelectionGraphNode*> validGroupNodes;
-            int numGroupNodes = groupNodes.size();
-
-            for(int i = 0 ; i < numGroupNodes ; ++i){
-                SelectionGraphNode* node = groupNodes.at(i);
-                if(node->inDegree() + node->outDegree() == 0)
-                    validGroupNodes.push_back(node);
-            }
-
-            vector<SelectionGraphEdge*> &groupEdges = mapGroupToEdges[*groupIterator];
-            if(groupEdges.size() + validGroupNodes.size() > 0){
-                notEmptyGroups.insert(*groupIterator);
-                tempMapGroupToNodes[*groupIterator] = validGroupNodes;
+    const auto trips = *selectedTrips;
+    const auto selection = SelectionSnapshot::capture(selectionGraph);
+    const auto xAttribute = attrib1, yAttribute = attrib2;
+    computeJob.submit([trips, selection, xAttribute, yAttribute](const Cancellation &cancel) {
+        std::map<Group, QVector<QCPGraphData>> points;
+        for (const auto &group : selection.groups) points[group.first];
+        double xmin=INFINITY,xmax=-INFINITY,ymin=INFINITY,ymax=-INFINITY;
+        size_t n=0;
+        for (auto trip : trips) {
+            if ((n++ & 1023)==0) cancel.check();
+            const auto p = getCoords(trip, xAttribute, yAttribute);
+            for (auto &group : points) if (selection.matches(group.first, trip)) {
+                group.second.append(QCPGraphData(p.x(),p.y()));
+                xmin=std::min(xmin,p.x()); xmax=std::max(xmax,p.x());
+                ymin=std::min(ymin,p.y()); ymax=std::max(ymax,p.y());
             }
         }
-
-        groups.clear();
-        groups = notEmptyGroups;
-        mapGroupToNodes.clear();
-        mapGroupToNodes = tempMapGroupToNodes;
-
-        //
-        for(groupIterator = groups.begin() ; groupIterator != groups.end() ; ++groupIterator){
-            QPen pen;
-            QCPGraph* graph = ui->customPlot->addGraph();
+        ScatterData data;
+        for (auto &group : points) {
+            cancel.check();
+            auto container = QSharedPointer<QCPGraphDataContainer>::create();
+            size_t comparisons=0;
+            std::sort(group.second.begin(),group.second.end(),[&](const QCPGraphData &a,const QCPGraphData &b) {
+                if ((comparisons++ & 4095)==0) cancel.check();
+                return a.key<b.key;
+            });
+            container->set(group.second, true);
+            data.groups[group.first] = container;
+        }
+        auto range=[](double low,double high) {
+            if (!std::isfinite(low) || !std::isfinite(high)) return QCPRange(0,1);
+            if (low==high) return QCPRange(low-.5,high+.5);
+            return QCPRange(low,high);
+        };
+        data.xRange=range(xmin,xmax); data.yRange=range(ymin,ymax);
+        return data;
+    }, [this, global=selection.global](ScatterData data) {
+        ui->customPlot->clearGraphs();
+        for (const auto &entry : data.groups) {
+            auto graph = ui->customPlot->addGraph();
+            auto color = entry.first.getColor();
+            color.setAlphaF(global ? 0.05 : 0.3);
+            graph->setPen(QPen(color));
+            // Keep coincident points: alpha blending represents density.
+            graph->setAdaptiveSampling(false);
             graph->setLineStyle(QCPGraph::lsNone);
-            graph->setScatterStyle(QCP::ssDisc);
-            graph->setScatterSize(10);
-
-            Group group = *groupIterator;
-
-            QColor color = group.getColor();
-            mapGroupGraph[group] = graph;
-            color.setAlphaF(0.3);
-            pen.setColor(color);
-            graph->setPen(pen);
+            graph->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssDisc, 10));
+            graph->setData(entry.second);
         }
-    }
-
-    //int numberOfTrip = selectedTrips->size();
-    map<Group,pair<QVector<double>,QVector<double> > > mapGroupData;
-    if(buildGlobalPlot){
-        int numberOfTrips = selectedTrips->size();
-        //QVector<double> x(numberOfTrips), y(numberOfTrips);
-        QVector<double> x, y;
-        mapGroupData[QColor(0,0,0)] = make_pair(x,y);
-    }
-    else{
-        QVector<double> x, y;
-        for(groupIterator = groups.begin() ; groupIterator != groups.end() ; ++groupIterator){
-            Group group = *groupIterator;
-
-            mapGroupData[group.getColor()] = make_pair(x,y);
-
-        }
-    }
-
-    // add graphs with different scatter styles:
-    KdTrip::TripSet::iterator it = selectedTrips->begin();
-    for (; it != selectedTrips->end(); ++it) {
-        const KdTrip::Trip * trip = *it;
-        QPointF coords = getCoords(trip);
-
-        if(buildGlobalPlot){
-            pair<QVector<double>,QVector<double> > &data =
-                    mapGroupData[QColor(0,0,0)];
-            QVector<double> &x = data.first;
-            QVector<double> &y = data.second;
-            x << coords.x();
-            y << coords.y();
-        }
-        else{
-            for(groupIterator = groups.begin() ; groupIterator != groups.end() ; ++groupIterator){
-                Group currentGroup = *groupIterator;
-
-                assert(mapGroupToNodes.count(currentGroup) > 0 && mapGroupToEdges.count(currentGroup) > 0);
-
-                if(tripSatisfiesConstraints(trip, mapGroupToNodes[currentGroup],mapGroupToEdges[currentGroup])){
-                    pair<QVector<double>,QVector<double> > &data =
-                            mapGroupData[currentGroup.getColor()];
-                    QVector<double> &x = data.first;
-                    QVector<double> &y = data.second;
-                    x << coords.x();
-                    y << coords.y();
-                    continue; // make sure the point is only added once
-                }
-            }
-        }
-    }
-
-    if(buildGlobalPlot){
-        pair<QVector<double>,QVector<double> > &data =
-                mapGroupData[QColor(0,0,0)];
-        QVector<double> &x = data.first;
-        QVector<double> &y = data.second;
-        QCPGraph* graph = mapGroupGraph[QColor(0,0,0)];
-        graph->setData(x, y);
-        graph->rescaleAxes(true);
-    }
-    else{
-        for(groupIterator = groups.begin() ; groupIterator != groups.end() ; ++groupIterator){
-            Group currentGroup = *groupIterator;
-            pair<QVector<double>,QVector<double> > &data =
-                    mapGroupData[currentGroup.getColor()];
-            QVector<double> &x = data.first;
-            QVector<double> &y = data.second;
-            QCPGraph* graph = mapGroupGraph[currentGroup.getColor()];
-            graph->setData(x, y);
-            graph->rescaleAxes(true);
-        }
-    }
-
-    //
-    int numGraphs = ui->customPlot->graphCount();
-    for(int i = 0 ; i < numGraphs ; ++i){
-        ui->customPlot->graph(i)->rescaleAxes(false,true);
-    }
-    //ui->customPlot->yAxis->scaleRange(1.1, ui->customPlot->yAxis->range().center());
-    ui->customPlot->setRangeDrag(Qt::Horizontal|Qt::Vertical);
-    ui->customPlot->setRangeZoom(Qt::Horizontal|Qt::Vertical);
-    ui->customPlot->setInteractions(QCustomPlot::iRangeDrag | QCustomPlot::iRangeZoom | QCustomPlot::iSelectAxes |
-                                    QCustomPlot::iSelectLegend | QCustomPlot::iSelectPlottables | QCustomPlot::iSelectTitle);
-
-    //
-    ui->customPlot->replot();
+        ui->customPlot->xAxis->setRange(data.xRange);
+        ui->customPlot->yAxis->setRange(data.yRange);
+        ui->customPlot->axisRect()->setRangeDrag(Qt::Horizontal|Qt::Vertical);
+        ui->customPlot->axisRect()->setRangeZoom(Qt::Horizontal|Qt::Vertical);
+        ui->customPlot->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom | QCP::iSelectAxes |
+                                        QCP::iSelectLegend | QCP::iSelectPlottables | QCP::iSelectOther);
+        ui->customPlot->replot(QCustomPlot::rpQueuedReplot);
+    });
 }
 
 void ScatterPlotWidget::updateAttributes(){
@@ -500,12 +402,13 @@ ScatterPlotWidget::ScatterPlotAttributes ScatterPlotWidget::getAttrib(QString s)
     }
 }
 
-QPointF ScatterPlotWidget::getCoords(const KdTrip::Trip *trip){
+QPointF ScatterPlotWidget::getCoords(const KdTrip::Trip *trip, ScatterPlotAttributes attrib1, ScatterPlotAttributes attrib2){
     //
     qreal coord1;
     //
     time_t t = trip->pickup_time;
-    struct tm* st_tm =  localtime (&t);
+    struct tm localTime;
+    struct tm* st_tm = localtime_r(&t, &localTime);
     assert(st_tm != NULL);
     //cout << "   st_tm " << st_tm->tm_hour << " " << (st_tm->tm_yday + 1900) << endl;
 
@@ -572,7 +475,7 @@ QPointF ScatterPlotWidget::getCoords(const KdTrip::Trip *trip){
         break;
     case(AVG_SPEED):
         if(trip->dropoff_time == trip->pickup_time)
-            coord1 = 0;
+            coord2 = 0;
         else
             coord2 = (trip->distance * 36)/(trip->dropoff_time - trip->pickup_time);
         break;

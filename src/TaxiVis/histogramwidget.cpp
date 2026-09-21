@@ -57,48 +57,6 @@ void HistogramWidget::setSelectionGraph(SelectionGraph *v){
     this->selectionGraph = v;
 }
 
-void HistogramWidget::computeDataBounds(){
-
-    //
-    for(int i = int(HistogramWidget::FARE_AMOUNT) ; i != int(HistogramWidget::FIELD4) ; i++)
-        histogramDataBounds[HistogramWidget::PlotAttribute(i)] = make_pair(numeric_limits<float>::max(),numeric_limits<float>::min());
-
-    //
-    KdTrip::TripSet::iterator it;
-    for(it = selectedTrips->begin() ; it != selectedTrips->end() ; ++it){
-        const KdTrip::Trip *trip = *it;
-
-        // only use valid trips
-        if(trip->dropoff_time < trip->pickup_time)
-            continue;
-
-        for(int i = int(HistogramWidget::FARE_AMOUNT) ; i != int(HistogramWidget::FIELD4) ; i++){
-            pair<float,float>& bounds = histogramDataBounds[(HistogramWidget::PlotAttribute)i];
-            float tripAttValue = getTripValue(trip,(HistogramWidget::PlotAttribute)i);
-            updateBounds(bounds,tripAttValue);
-        }
-    }
-
-    //
-    map<PlotAttribute, std::pair<float,float> >::iterator bit = histogramDataBounds.begin();
-    for(; bit != histogramDataBounds.end() ; ++bit){
-        pair<float,float> &bounds = bit->second;
-        if(bounds.first == bounds.second){
-            bit->second = make_pair(bounds.first - 1,bounds.first + 1);
-        }
-    }
-
-    //        cout << "Data Bounds" << endl;
-    //        pair<float,float> bounds = histogramDataBounds[HistogramWidget::FARE_AMOUNT];
-    //        cout << "   Fare Bounds " << bounds.first << " " << bounds.second << endl;
-    //        bounds = histogramDataBounds[HistogramWidget::TIP_AMOUNT];
-    //        cout << "   Tip Bounds " << bounds.first << " " << bounds.second << endl;
-    //        bounds = histogramDataBounds[HistogramWidget::DISTANCE];
-    //        cout << "   Distance Bounds " << bounds.first << " " << bounds.second << endl;
-    //        bounds = histogramDataBounds[HistogramWidget::DURATION];
-    //        cout << "   Duration Bounds " << bounds.first << " " << bounds.second << endl;
-}
-
 bool HistogramWidget::tripSatisfiesEdge(const KdTrip::Trip *trip, SelectionGraphEdge* edge){
     return (edge->getTail()->getSelection()->contains(QPointF(trip->pickup_lat,trip->pickup_long)) &&
             edge->getHead()->getSelection()->contains(QPointF(trip->dropoff_lat,trip->dropoff_long)));
@@ -149,7 +107,6 @@ bool HistogramWidget::tripSatisfiesConstraints(const KdTrip::Trip *trip,
 
 void HistogramWidget::updateControlValues(){
     if(groupPlots.size() == 0){
-        cerr << "grouop plots 0" << endl;
         return;
     }
 
@@ -160,19 +117,10 @@ void HistogramWidget::updateControlValues(){
     QCPBars* b = groupPlots.begin()->second;
     float barWidth = b->width();
 
-    const QCPBarDataMap* datamap = b->data();
-    QCPBarDataMap::const_iterator it = datamap->begin();
-
-    double key = it.key();
-    double minBin = key - barWidth/2;
-
-
-    //
-    QMapIterator<double, QCPBarData> i(*datamap);
-    i.toBack();
-    i.previous();
-    key = i.key();
-    double maxBin = key + barWidth/2;
+    const auto data = b->data();
+    if (data->isEmpty()) return;
+    double minBin = data->constBegin()->key - barWidth/2;
+    double maxBin = (data->constEnd()-1)->key + barWidth/2;
 
     //
     ui->histogram->setControlValues(minBin,attribBounds.first,maxBin,attribBounds.second);
@@ -223,166 +171,9 @@ float HistogramWidget::getTripValue(const KdTrip::Trip *trip,HistogramWidget::Pl
     return tripAttribValue;
 }
 
-void HistogramWidget::computeHistograms() {
-    if(selectionGraph == NULL)
-        return;
-
-    //
-    groupHistograms.clear();
-    histogramDataBounds.clear();
-
-    //compute bounds
-    computeDataBounds();
-
-    // compute bins
-    std::map<PlotAttribute, std::vector<HistBin> > templateHistograms;
-    map<PlotAttribute, std::pair<float,float> >::iterator boundsIterator;
-    for(boundsIterator = histogramDataBounds.begin();boundsIterator != histogramDataBounds.end() ; ++boundsIterator){
-        PlotAttribute attribute = boundsIterator->first;
-        pair<float,float> bounds = boundsIterator->second;
-        float binSize = (bounds.second - bounds.first)/numberOfBins;
-
-        vector<HistBin>plot;
-
-        for(int i = 0 ; i < numberOfBins ; ++i){
-            float minBin = bounds.first + i*binSize;
-            float maxBin = minBin + binSize;
-            HistBin bin;
-            bin.minBin = minBin;
-            bin.maxBin = maxBin;
-            bin.maxBin = 0.0f;
-
-            plot.push_back(bin);
-        }
-
-        templateHistograms[attribute] = plot;
-    }
-    //initialize histograms
-    bool buildGlobalPlot = (selectionGraph->isEmpty());
-    set<Group> groups;
-    map<Group,vector<SelectionGraphNode*> > mapGroupToNodes;
-    map<Group,vector<SelectionGraphEdge*> > mapGroupToEdges;
-    selectionGraph->groupNodesAndEdgeByColor(groups,mapGroupToNodes,mapGroupToEdges);
-    set<Group>::iterator groupIterator;
-
-    //
-    set<Group> notEmptyGroups;
-    map<Group,vector<SelectionGraphNode*> > tempMapGroupToNodes;
-
-    if(buildGlobalPlot){
-        groupHistograms[Group(Qt::black)] = templateHistograms;
-    }
-    else{
-        //
-        for(groupIterator = groups.begin() ; groupIterator != groups.end() ; ++groupIterator){
-            vector<SelectionGraphNode*> &groupNodes = mapGroupToNodes[*groupIterator];
-            vector<SelectionGraphNode*> validGroupNodes;
-            int numGroupNodes = groupNodes.size();
-
-            for(int i = 0 ; i < numGroupNodes ; ++i){
-                SelectionGraphNode* node = groupNodes.at(i);
-                if(node->inDegree() + node->outDegree() == 0)
-                    validGroupNodes.push_back(node);
-            }
-
-            vector<SelectionGraphEdge*> &groupEdges = mapGroupToEdges[*groupIterator];
-            if(groupEdges.size() + validGroupNodes.size() > 0){
-                notEmptyGroups.insert(*groupIterator);
-                tempMapGroupToNodes[*groupIterator] = validGroupNodes;
-            }
-        }
-
-        //
-        groups.clear();
-        groups = notEmptyGroups;
-        mapGroupToNodes.clear();
-        mapGroupToNodes = tempMapGroupToNodes;
-
-        //
-        for(groupIterator = groups.begin() ; groupIterator != groups.end() ; ++groupIterator){
-            groupHistograms[*groupIterator] = templateHistograms;
-        }
-    }
-
-    //
-    KdTrip::TripSet::iterator it;
-
-    for(it = selectedTrips->begin() ; it != selectedTrips->end() ; ++it){
-        const KdTrip::Trip *trip = *it;
-
-        // only use valid trips
-        if(trip->dropoff_time < trip->pickup_time)
-            continue;
-
-        if(buildGlobalPlot){
-            map<PlotAttribute, vector<HistBin> > &groupHists  = groupHistograms[Group(Qt::black)];
-            map<PlotAttribute, vector<HistBin> >::iterator attIterator;
-            for(attIterator = groupHists.begin() ; attIterator != groupHists.end() ; ++attIterator){
-                PlotAttribute    currentAttb = attIterator->first;
-                vector<HistBin> &currentHist = attIterator->second;
-
-                pair<float,float> attribBounds = histogramDataBounds[currentAttb];
-                float binSize = (attribBounds.second - attribBounds.first)/numberOfBins;
-                if (binSize<1e-6) continue;
-
-                float tripAttribValue = getTripValue(trip,currentAttb);
-
-                int binIndex = (tripAttribValue - attribBounds.first)/binSize;
-                if(binIndex == numberOfBins)
-                    --binIndex;
-
-                if(currentHist.size() <= binIndex){
-                    cout << "Trip.fareamount " << trip->fare_amount << endl;
-                    cout << "Trip Attrib Value " << tripAttribValue << " attribBounds.first " << attribBounds.first << endl;
-                    cout << "attribBounds.first " << attribBounds.first << " attribBounds.second " << attribBounds.second << endl;
-                    cout << "Current Hist Size " << currentHist.size() << " binIndex " << binIndex << endl;
-                    exit(1);
-                }
-                HistBin& bin = currentHist[binIndex];
-                bin.freq += 1;
-            }
-        }
-        else{
-            for(groupIterator = groups.begin() ; groupIterator != groups.end() ; ++groupIterator){
-                Group currentGroup = *groupIterator;
-
-                assert(mapGroupToNodes.count(currentGroup) > 0 && mapGroupToEdges.count(currentGroup) > 0);
-
-                if(tripSatisfiesConstraints(trip, mapGroupToNodes[currentGroup],mapGroupToEdges[currentGroup])){
-                    //update group hist
-                    map<PlotAttribute, vector<HistBin> > &groupHists  = groupHistograms[currentGroup];
-                    map<PlotAttribute, vector<HistBin> >::iterator attIterator;
-                    for(attIterator = groupHists.begin() ; attIterator != groupHists.end() ; ++attIterator){
-                        PlotAttribute    currentAttb = attIterator->first;
-                        vector<HistBin> &currentHist = attIterator->second;
-
-                        pair<float,float> attribBounds = histogramDataBounds[currentAttb];
-                        float binSize = (attribBounds.second - attribBounds.first)/numberOfBins;
-                        if (binSize<1e-6) continue;
-                        float tripAttribValue = getTripValue(trip,currentAttb);
-
-                        int binIndex = (tripAttribValue - attribBounds.first)/binSize;
-                        if(binIndex == numberOfBins)
-                            --binIndex;
-
-                        if(!(0 <= binIndex && binIndex < currentHist.size())){
-                            cout << "Bin index " << binIndex << " histSize " << currentHist.size() << " numberOfBins " << numberOfBins << " tripValue " << tripAttribValue << " attribBounds.first " << attribBounds.first << endl;
-                            cout << "    intended bin " << (tripAttribValue - attribBounds.first)/binSize << endl;
-                            assert(0 <= binIndex && binIndex < currentHist.size());
-                        }
-
-                        HistBin& bin = currentHist[binIndex];
-                        bin.freq += 1;
-                    }
-
-
-                }
-            }
-        }
-    }
-}
-
 void HistogramWidget::updatePlots(){
+    if (groupHistograms.empty()) return;
+    const int numberOfBins=int(groupHistograms.begin()->second.at(_plotAttribute).size());
 
     //
     updateControlValues();
@@ -443,12 +234,11 @@ void HistogramWidget::updatePlots(){
         QCPBars *barPlot;
         if(groupPlots.count(group) > 0){
             barPlot = groupPlots[group];
-            barPlot->clearData();
+            barPlot->data()->clear();
         }
         else{
             barPlot = new QCPBars(ui->histogram->xAxis, ui->histogram->yAxis);
             groupPlots[group] = barPlot;
-            ui->histogram->addPlottable(barPlot);
             //
             QPen pen;
             pen.setWidthF(1.2);
@@ -484,26 +274,25 @@ void HistogramWidget::updatePlots(){
         // labels << QString::fromStdString(ss.str());//number((minBin+maxBin)/2);
     }
 
-    ui->histogram->xAxis->setAutoTicks(false);
-    ui->histogram->xAxis->setAutoTickLabels(false);
-    ui->histogram->xAxis->setTickVector(ticks);
-    ui->histogram->xAxis->setTickVectorLabels(labels);
+    QSharedPointer<QCPAxisTickerText> ticker(new QCPAxisTickerText);
+    ticker->addTicks(ticks, labels);
+    ui->histogram->xAxis->setTicker(ticker);
     ui->histogram->xAxis->setTickLabelRotation(0);
-    ui->histogram->xAxis->setSubTickCount(0);
+    ui->histogram->xAxis->setSubTicks(false);
     ui->histogram->xAxis->setTickLength(0, 4);
-    ui->histogram->xAxis->setGrid(false);
+    ui->histogram->xAxis->grid()->setVisible(false);
     ui->histogram->xAxis->setRange(0, numberOfBins + 1);
 
     // prepare y axis:
     ui->histogram->yAxis->setPadding(5); // a bit more space to the left border
     ui->histogram->yAxis->setLabel("Frequency");
-    ui->histogram->yAxis->setSubGrid(true);
+    ui->histogram->yAxis->grid()->setSubGridVisible(true);
     QPen gridPen;
     gridPen.setStyle(Qt::SolidLine);
     gridPen.setColor(QColor(0, 0, 0, 25));
-    ui->histogram->yAxis->setGridPen(gridPen);
+    ui->histogram->yAxis->grid()->setPen(gridPen);
     gridPen.setStyle(Qt::DotLine);
-    ui->histogram->yAxis->setSubGridPen(gridPen);
+    ui->histogram->yAxis->grid()->setSubGridPen(gridPen);
 
     // Add data:
     float maxCount = -1;
@@ -536,37 +325,70 @@ void HistogramWidget::updatePlots(){
     //    legendFont.setPointSize(10);
     //    customPlot->legend->setFont(legendFont);
 
-    ui->histogram->setRangeDrag(Qt::Horizontal|Qt::Vertical);
-    ui->histogram->setRangeZoom(Qt::Horizontal|Qt::Vertical);
-    ui->histogram->setInteractions(QCustomPlot::iRangeDrag | QCustomPlot::iRangeZoom | QCustomPlot::iSelectAxes
-                                   | QCustomPlot::iSelectTitle);
+    ui->histogram->axisRect()->setRangeDrag(Qt::Horizontal|Qt::Vertical);
+    ui->histogram->axisRect()->setRangeZoom(Qt::Horizontal|Qt::Vertical);
+    ui->histogram->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom | QCP::iSelectAxes
+                                   | QCP::iSelectOther);
 
-    ui->histogram->replot();
+    ui->histogram->replot(QCustomPlot::rpQueuedReplot);
 
     _yMin = 0;
     _yMax = maxCount+1;
 }
 
 void HistogramWidget::recomputePlots(){
-    //
-    computeHistograms();
-
-    //
-    updatePlots();
-
-    //
-    updateControlValues();
-
-    // update all plots if it is synchronize
-    if (Coordinator::instance()->containsHist(this)){
-        Coordinator::instance()->notifyAll();
-    }
+    if (suspended || !selectedTrips || !selectionGraph) return;
+    const auto trips = *selectedTrips;
+    const auto selection = SelectionSnapshot::capture(selectionGraph);
+    const int bins = std::max(1, numberOfBins);
+    computeJob.submit([trips, selection, bins](const Cancellation &cancel) {
+        HistogramData data;
+        for (int i=FARE_AMOUNT; i<=FIELD4; ++i)
+            data.bounds[PlotAttribute(i)] = {std::numeric_limits<float>::max(), std::numeric_limits<float>::lowest()};
+        size_t n=0;
+        for (auto trip : trips) {
+            if ((n++ & 1023)==0) cancel.check();
+            if (trip->dropoff_time < trip->pickup_time) continue;
+            for (auto &entry : data.bounds) updateBounds(entry.second, getTripValue(trip, entry.first));
+        }
+        std::map<PlotAttribute, std::vector<HistBin>> prototype;
+        for (auto &entry : data.bounds) {
+            auto &bounds = entry.second;
+            if (bounds.first > bounds.second) bounds = {0,1};
+            else if (bounds.first == bounds.second) bounds = {bounds.first-1,bounds.second+1};
+            const float width = (bounds.second-bounds.first)/bins;
+            auto &hist = prototype[entry.first];
+            hist.resize(bins);
+            for (int i=0; i<bins; ++i) { hist[i].minBin = bounds.first+i*width; hist[i].maxBin = bounds.first+(i+1)*width; }
+        }
+        for (const auto &group : selection.groups) data.groups[group.first] = prototype;
+        n=0;
+        for (auto trip : trips) {
+            if ((n++ & 1023)==0) cancel.check();
+            if (trip->dropoff_time < trip->pickup_time) continue;
+            for (auto &group : data.groups) if (selection.matches(group.first, trip)) {
+                for (auto &hist : group.second) {
+                    const auto bounds = data.bounds.at(hist.first);
+                    int index = int((getTripValue(trip,hist.first)-bounds.first)/(bounds.second-bounds.first)*bins);
+                    index = std::clamp(index, 0, bins-1);
+                    hist.second[index].freq++;
+                }
+            }
+        }
+        return data;
+    }, [this](HistogramData data) {
+        groupHistograms = std::move(data.groups);
+        histogramDataBounds = std::move(data.bounds);
+        updatePlots();
+        updateControlValues();
+        if (Coordinator::instance()->containsHist(this)) Coordinator::instance()->notifyAll();
+    });
 }
 
 void HistogramWidget::updateYRange(float min, float max)
 {
   ui->histogram->yAxis->setRange(min, max);
-  ui->histogram->replot();
+  ui->histogram->replot(QCustomPlot::rpQueuedReplot);
 }
 
 void HistogramWidget::changeHistAttribute(QString selectedText){
@@ -637,7 +459,9 @@ int HistogramWidget::getNumberOfBins()
 }
 
 void HistogramWidget::setNumberOfBins(int v){
-    numberOfBins = v;
+    const QSignalBlocker blocker(ui->numBinsSpinBox);
+    ui->numBinsSpinBox->setValue(v);
+    numberOfBins = ui->numBinsSpinBox->value();
 }
 
 void HistogramWidget::mousePress(QMouseEvent* e){
@@ -646,12 +470,12 @@ void HistogramWidget::mousePress(QMouseEvent* e){
 
 
 
-    if (ui->histogram->xAxis->selected().testFlag(QCPAxis::spAxis))
-        ui->histogram->setRangeDrag(ui->histogram->xAxis->orientation());
-    else if (ui->histogram->yAxis->selected().testFlag(QCPAxis::spAxis))
-        ui->histogram->setRangeDrag(ui->histogram->yAxis->orientation());
+    if (ui->histogram->xAxis->selectedParts().testFlag(QCPAxis::spAxis))
+        ui->histogram->axisRect()->setRangeDrag(ui->histogram->xAxis->orientation());
+    else if (ui->histogram->yAxis->selectedParts().testFlag(QCPAxis::spAxis))
+        ui->histogram->axisRect()->setRangeDrag(ui->histogram->yAxis->orientation());
     else
-        ui->histogram->setRangeDrag(Qt::Horizontal|Qt::Vertical);
+        ui->histogram->axisRect()->setRangeDrag(Qt::Horizontal|Qt::Vertical);
 }
 
 void HistogramWidget::mouseDouble(QMouseEvent *e){
@@ -666,16 +490,16 @@ void HistogramWidget::mouseDouble(QMouseEvent *e){
         float barWidth = b->width();
 
         //qDebug() << "QCPBAR " << b->width();
-        const QCPBarDataMap* datamap = b->data();
+        const auto datamap = b->data();
 
-        QCPBarDataMap::const_iterator it = datamap->begin();
-        QCPBarDataMap::const_iterator itEnd = datamap->end();
+        QCPBarsDataContainer::const_iterator it = datamap->begin();
+        QCPBarsDataContainer::const_iterator itEnd = datamap->end();
 
         for(; it != itEnd ; ++it){
-            double key = it.key();
+            double key = it->key;
             double minBin = key - barWidth/2;
             double maxBin = key + barWidth/2;
-            QCPBarData data = it.value();
+            QCPBarsData data = *it;
             double valuef = data.value;
             //cout << "   testing " << minBin << " " << maxBin << " " << key << " " << valuef << endl;
             if(y <= valuef && minBin <= x && x <= maxBin){
@@ -691,12 +515,12 @@ void HistogramWidget::mouseWheel(){
     // if an axis is selected, only allow the direction of that axis to be zoomed
     // if no axis is selected, both directions may be zoomed
 
-    if (ui->histogram->xAxis->selected().testFlag(QCPAxis::spAxis))
-        ui->histogram->setRangeZoom(ui->histogram->xAxis->orientation());
-    else if (ui->histogram->yAxis->selected().testFlag(QCPAxis::spAxis))
-        ui->histogram->setRangeZoom(ui->histogram->yAxis->orientation());
+    if (ui->histogram->xAxis->selectedParts().testFlag(QCPAxis::spAxis))
+        ui->histogram->axisRect()->setRangeZoom(ui->histogram->xAxis->orientation());
+    else if (ui->histogram->yAxis->selectedParts().testFlag(QCPAxis::spAxis))
+        ui->histogram->axisRect()->setRangeZoom(ui->histogram->yAxis->orientation());
     else
-        ui->histogram->setRangeZoom(Qt::Horizontal|Qt::Vertical);
+        ui->histogram->axisRect()->setRangeZoom(Qt::Horizontal|Qt::Vertical);
 }
 
 bool satisfySelections(float value, const QList<IntervalSelection> &selections) {
@@ -706,50 +530,25 @@ bool satisfySelections(float value, const QList<IntervalSelection> &selections) 
   return selections.count()==0;
 }
 
+std::function<bool(const KdTrip::Trip*)> HistogramWidget::filterSnapshot() const
+{
+    const auto intervals=ui->histogram->getSelections();
+    const auto selection=SelectionSnapshot::capture(selectionGraph);
+    const auto attribute=_plotAttribute;
+    return [intervals,selection,attribute](const KdTrip::Trip *trip) {
+        if (trip->dropoff_time<trip->pickup_time || !satisfySelections(getTripValue(trip,attribute),intervals)) return false;
+        for (const auto &group : selection.groups) if (selection.matches(group.first,trip)) return true;
+        return false;
+    };
+}
+
 void HistogramWidget::joinSelectedTrips(KdTrip::TripSet *out)
 {
-  QList<IntervalSelection> selections = this->ui->histogram->getSelections();
-
-  if(this->selectionGraph == NULL)
-    return;
-
-  KdTrip::TripSet filtered;
-
-  bool buildGlobalPlot = (this->selectionGraph->isEmpty());
-  set<Group> groups;
-  map<Group,vector<SelectionGraphNode*> > mapGroupToNodes;
-  map<Group,vector<SelectionGraphEdge*> > mapGroupToEdges;
-  this->selectionGraph->groupNodesAndEdgeByColor(groups,mapGroupToNodes,mapGroupToEdges);
-  set<Group>::iterator groupIterator;
-
-  //
-  KdTrip::TripSet::iterator it;
-
-  for(it = out->begin() ; it != out->end() ; ++it) {
-    const KdTrip::Trip *trip = (*it);
-
-    // only use valid trips
-    if(trip->dropoff_time < trip->pickup_time)
-      continue;
-
-    if(buildGlobalPlot) {
-      float tripAttribValue = getTripValue(trip,this->_plotAttribute);
-      if (satisfySelections(tripAttribValue, selections))
-        filtered.insert(trip);
-    }
-    else{
-      for(groupIterator = groups.begin() ; groupIterator != groups.end() ; ++groupIterator){
-        Group currentGroup = *groupIterator;
-        if(this->tripSatisfiesConstraints(*it, mapGroupToNodes[currentGroup],mapGroupToEdges[currentGroup])){
-          float tripAttribValue = getTripValue(trip,this->_plotAttribute);
-
-          if (satisfySelections(tripAttribValue, selections))
-            filtered.insert(trip);
-        }
-      }
-    }
-  }
-  out->swap(filtered);
+    const auto accepts=filterSnapshot();
+    KdTrip::TripSet filtered;
+    filtered.inheritOwners(*out);
+    for (auto trip : *out) if (accepts(trip)) filtered.insert(trip);
+    out->swap(filtered);
 }
 
 QString HistogramWidget::getAttributeDescription()

@@ -25,6 +25,7 @@ protected:
     void mouseMoveEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
 private:
+    QCPTextElement *plotTitle;
     QList<IntervalSelection> selections;
     State                    currentState;
     QPointF                  basePoint;
@@ -44,6 +45,9 @@ private:
     void inverseConvertSelection(const double &lowerBound, const double &upperBound, IntervalSelection &sel);
     void inverseConvertValue(const double x, double &value);
 
+public:
+    void setTitle(const QString &text) { plotTitle->setText(text); }
+    QString title() const { return plotTitle->text(); }
 signals:
     void updateSelection(QList<IntervalSelection>);
 };

@@ -7,7 +7,13 @@ ExtendedHistogram::ExtendedHistogram(QWidget *parent) :
     x0(0),
     convertedValue0(0),
     x1(1),
-    convertedValue1(1){}
+    convertedValue1(1)
+{
+    plotTitle = new QCPTextElement(this, QString(), QFont(font().family(), 12, QFont::Bold));
+    plotTitle->setSelectable(true);
+    plotLayout()->insertRow(0);
+    plotLayout()->addElement(0, 0, plotTitle);
+}
 
 void ExtendedHistogram::addSelection(double selMin, double selMax){
     IntervalSelection selection;

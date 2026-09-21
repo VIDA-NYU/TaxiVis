@@ -15,10 +15,14 @@ ExtendedPlotWidget::ExtendedPlotWidget(QWidget *parent) :
     QCustomPlot(parent),
     currentState(IDLE)
 {
-    this->setRangeDrag(Qt::Horizontal | Qt::Vertical);
-    this->setRangeZoom(Qt::Horizontal | Qt::Vertical);
+    this->axisRect()->setRangeDrag(Qt::Horizontal | Qt::Vertical);
+    this->axisRect()->setRangeZoom(Qt::Horizontal | Qt::Vertical);
     this->setMouseTracking(true);
     buttonPressed = false;
+    plotTitle = new QCPTextElement(this, QString(), QFont(font().family(), 12, QFont::Bold));
+    plotTitle->setSelectable(true);
+    plotLayout()->insertRow(0);
+    plotLayout()->addElement(0, 0, plotTitle);
 }
 
 void ExtendedPlotWidget::paintEvent(QPaintEvent *event){

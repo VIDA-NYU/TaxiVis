@@ -11,11 +11,15 @@ public:
 public:
     explicit ExtendedPlotWidget(QWidget *parent = 0);
 private:
+    QCPTextElement *plotTitle;
     State   currentState;
     QPointF lastPoint;
     QPointF currentPoint;
     QPointF mousePosition;
     bool    buttonPressed;
+public:
+    void setTitle(const QString &text) { plotTitle->setText(text); }
+    QString title() const { return plotTitle->text(); }
 signals:
     void timeIntervalChanged(QDateTime,QDateTime);
 public slots:

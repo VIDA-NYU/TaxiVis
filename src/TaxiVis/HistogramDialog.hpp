@@ -25,6 +25,10 @@ private:
   GeographicalViewWidget         *geoWidget;
   QList<ExtendedHistogram*>       plots;
   KdTrip::TripSet trips;
+  SelectionGraph selectionSnapshot;
+  LatestTask<KdTrip::TripSet> filterJob;
+  quint64 revision=0;
+  bool stale=false;
                                        
 public slots:
   void xAxisRangeChanged(const QCPRange &newRange);

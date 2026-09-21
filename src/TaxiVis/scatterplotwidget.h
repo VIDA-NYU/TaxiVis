@@ -5,6 +5,9 @@
 #include <set>
 #include "SelectionGraph.h"
 #include "KdTrip.hpp"
+#include "AsyncTask.hpp"
+#include "SelectionSnapshot.hpp"
+#include "qcustomplot.h"
 
 namespace Ui {
 class ScatterPlotWidget;
@@ -24,8 +27,12 @@ public:
     void setSelectedTripsRepository(KdTrip::TripSet *);
     void setSelectionGraph(SelectionGraph*);
     void recomputePlots();
+    void suspendComputation(bool value) { suspended=value; if (value) computeJob.cancel(); }
+    bool computationBusy() const { return computeJob.isBusy(); }
+    void cancelComputation() { computeJob.cancel(); }
 
 private:
+    bool suspended=false;
     Ui::ScatterPlotWidget *ui;
 
     //
@@ -37,10 +44,15 @@ private:
     SelectionGraph       *selectionGraph;
 
     //
+    struct ScatterData {
+        std::map<Group, QSharedPointer<QCPGraphDataContainer>> groups;
+        QCPRange xRange, yRange;
+    };
+    LatestTask<ScatterData> computeJob;
     void                  updatePlot();
     void                  updateAttributes();
     ScatterPlotAttributes getAttrib(QString);
-    QPointF               getCoords(const KdTrip::Trip *);
+    static QPointF getCoords(const KdTrip::Trip *, ScatterPlotAttributes attrib1, ScatterPlotAttributes attrib2);
 
     bool tripSatisfiesEdge(const KdTrip::Trip *trip, SelectionGraphEdge* edge);
     bool tripSatisfiesConstraints(const KdTrip::Trip *trip,

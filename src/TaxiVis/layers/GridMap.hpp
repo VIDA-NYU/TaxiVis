@@ -2,6 +2,7 @@
 #define GRID_MAP_HPP
 #include "RenderingLayer.hpp"
 #include "KdTrip.hpp"
+#include "AsyncTask.hpp"
 #include <set>
 #include <vector>
 #include <QList>
@@ -22,6 +23,8 @@ public:
   GridMap(GeographicalViewWidget *mw);
   virtual ~GridMap();
   void loadGrid(QString gridFile);
+  void cancelComputation();
+  bool computationBusy() const { return aggregationJob.isBusy(); }
 
   QColor borderColor();
   void   setBorderColor(QColor c);
@@ -47,6 +50,16 @@ public slots:
   void doneUpdating();
 
 protected:
+  enum AggregationKind { Count, Fare, Flow };
+  struct Aggregation {
+      std::vector<int> counts;
+      std::vector<float> fares;
+      std::vector<std::vector<float>> ratios;
+      std::vector<KdTrip::TripSet> trips;
+  };
+  LatestTask<Aggregation> aggregationJob;
+  virtual AggregationKind aggregationKind() const { return Count; }
+  virtual void acceptAggregation(Aggregation &) {}
   void buildCells();
   void renderGL();
   void renderLabel(QPainter *painter);
@@ -126,6 +139,7 @@ public:
 
 protected:
   std::vector<int> counts;
+  void acceptAggregation(Aggregation &a) override { counts=std::move(a.counts); }
 
   void aggregateBegin();
   void aggregateUpdate(int, const KdTrip::Trip *);
@@ -142,6 +156,8 @@ protected:
   std::vector<int>   counts;
   std::vector<float> fares;
 
+  AggregationKind aggregationKind() const override { return Fare; }
+  void acceptAggregation(Aggregation &a) override { counts=std::move(a.counts); fares=std::move(a.fares); }
   void aggregateBegin();
   void aggregateUpdate(int, const KdTrip::Trip *);
   void aggregateEnd();
@@ -157,6 +173,8 @@ protected:
   std::vector<int> counts;
   std::vector< std::vector<float> > ratios;
   
+  AggregationKind aggregationKind() const override { return Flow; }
+  void acceptAggregation(Aggregation &a) override { counts=std::move(a.counts); ratios=std::move(a.ratios); }
   void renderPicking();
   void aggregateBegin();
   void aggregateUpdate(int, const KdTrip::Trip *);

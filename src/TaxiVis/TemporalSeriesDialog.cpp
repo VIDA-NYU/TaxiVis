@@ -11,10 +11,12 @@ TemporalSeriesDialog::TemporalSeriesDialog(GeographicalViewWidget *geo, int numB
     this->ui->setupUi(this);
 
 
-    KdTrip::TripSet *trips = this->geoWidget->getSelectedTrips();
+    tripSnapshot=*geoWidget->getSelectedTrips();
+    graphSnapshot.assign(geoWidget->getSelectionGraph());
+    KdTrip::TripSet *trips = &tripSnapshot;
     QDateTime startTime = this->geoWidget->getSelectedStartTime();
     QDateTime endTime = this->geoWidget->getSelectedEndTime();
-    SelectionGraph *selectionGraph = this->geoWidget->getSelectionGraph();
+    SelectionGraph *selectionGraph = &graphSnapshot;
     QGridLayout *layout = this->ui->gridLayout;
 
     //add extra widgets to deal with the extra fields
@@ -68,8 +70,9 @@ TemporalSeriesDialog::TemporalSeriesDialog(GeographicalViewWidget *geo, int numB
             widget->setNumberOfBins(numBins);
         }
     }
+    for (auto plot : plots) plot->xAxis->setRange(startTime.toSecsSinceEpoch(),endTime.toSecsSinceEpoch());
     for (int i=0; i<this->plots.count(); i++) {
-        this->connect(this->plots[i]->rangeDragAxis(Qt::Horizontal),
+        this->connect(this->plots[i]->axisRect()->rangeDragAxis(Qt::Horizontal),
                       SIGNAL(rangeChanged(const QCPRange&)),
                       this, SLOT(xAxisRangeChanged(const QCPRange&)));
         this->connect(this->plots[i],
@@ -80,21 +83,22 @@ TemporalSeriesDialog::TemporalSeriesDialog(GeographicalViewWidget *geo, int numB
 
 TemporalSeriesDialog::~TemporalSeriesDialog()
 {
+    for (auto widget : findChildren<TemporalSeriesPlotWidget*>()) delete widget;
     delete this->ui;
 }
 
 void TemporalSeriesDialog::xAxisRangeChanged(const QCPRange &newRange)
 {
     for (int i=0; i<this->plots.count(); i++)
-        this->disconnect(this->plots[i]->rangeDragAxis(Qt::Horizontal),
+        this->disconnect(this->plots[i]->axisRect()->rangeDragAxis(Qt::Horizontal),
                          SIGNAL(rangeChanged(const QCPRange&)),
                          this, SLOT(xAxisRangeChanged(const QCPRange&)));
     for (int i=0; i<this->plots.count(); i++) {
-        this->plots[i]->rangeDragAxis(Qt::Horizontal)->setRange(newRange);
+        this->plots[i]->axisRect()->rangeDragAxis(Qt::Horizontal)->setRange(newRange);
         this->plots[i]->replot();
     }
     for (int i=0; i<this->plots.count(); i++)
-        this->connect(this->plots[i]->rangeDragAxis(Qt::Horizontal),
+        this->connect(this->plots[i]->axisRect()->rangeDragAxis(Qt::Horizontal),
                       SIGNAL(rangeChanged(const QCPRange&)),
                       this, SLOT(xAxisRangeChanged(const QCPRange&)));
 }
@@ -103,14 +107,14 @@ void TemporalSeriesDialog::xAxisRangeChanged(const QCPRange &newRange)
 void TemporalSeriesDialog::timeIntervalChanged(QDateTime start, QDateTime end)
 {
     for (int i=0; i<this->plots.count(); i++) {
-        this->plots[i]->rangeDragAxis(Qt::Horizontal)->setRange(start.toSecsSinceEpoch(), end.toSecsSinceEpoch());
+        this->plots[i]->axisRect()->rangeDragAxis(Qt::Horizontal)->setRange(start.toSecsSinceEpoch(), end.toSecsSinceEpoch());
         this->plots[i]->replot();
     }
 }
 
 QDateTime TemporalSeriesDialog::startTime()
 {
-    time_t t = this->plots[0]->rangeDragAxis(Qt::Horizontal)->range().lower;
+    time_t t = this->plots[0]->axisRect()->rangeDragAxis(Qt::Horizontal)->range().lower;
     struct tm* st_tm =  localtime (&t);
     return QDateTime(QDate(st_tm->tm_year + 1900,
                            st_tm->tm_mon + 1,
@@ -122,7 +126,7 @@ QDateTime TemporalSeriesDialog::startTime()
 
 QDateTime TemporalSeriesDialog::endTime()
 {
-    time_t t = this->plots[0]->rangeDragAxis(Qt::Horizontal)->range().upper;
+    time_t t = this->plots[0]->axisRect()->rangeDragAxis(Qt::Horizontal)->range().upper;
     struct tm* st_tm =  localtime (&t);
     return QDateTime(QDate(st_tm->tm_year + 1900,
                            st_tm->tm_mon + 1,

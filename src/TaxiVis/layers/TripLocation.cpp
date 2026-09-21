@@ -63,6 +63,7 @@ void TripLocation::render(QPainter *painter)
 
 void TripLocation::updateData()
 {
+  locationJob.cancel();
   this->dataReady = false;
   if (this->enabled)
     this->buildLocations();  
@@ -82,27 +83,28 @@ void TripLocation::initGL()
 
 void TripLocation::buildLocations()
 {
-  KdTrip::TripSet::iterator it;
-  KdTrip::TripSet *selectedTrips = this->geoWidget->getSelectedTrips();
-  this->vertices.clear();
-  this->vertices.resize(2*2*selectedTrips->size());
-  float *pickup = &this->vertices[0];
-  float *dropoff = pickup + 2*selectedTrips->size();
-  for (it=selectedTrips->begin(); it!=selectedTrips->end(); it++, pickup+=2, dropoff+=2) {
-    const KdTrip::Trip *trip = *it;
-    pickup[0] = trip->pickup_lat;
-    pickup[1] = trip->pickup_long;
-    dropoff[0] = trip->dropoff_lat;
-    dropoff[1] = trip->dropoff_long;
-  }
-  this->bufferDirty = true;
-  this->dataReady = true;
+  if (!geoWidget->getSelectedTrips() || !geoWidget->hasCurrentSelection()) return;
+  const auto trips = *geoWidget->getSelectedTrips();
+  locationJob.submit([trips](const Cancellation &cancel) {
+      std::vector<float> result(4*trips.size());
+      size_t i=0;
+      for (auto trip : trips) {
+          if ((i & 1023)==0) cancel.check();
+          result[2*i]=trip->pickup_lat; result[2*i+1]=trip->pickup_long;
+          result[2*trips.size()+2*i]=trip->dropoff_lat; result[2*trips.size()+2*i+1]=trip->dropoff_long;
+          ++i;
+      }
+      return result;
+  }, [this](std::vector<float> result) {
+      vertices=std::move(result); bufferDirty=true; dataReady=true;
+      geoWidget->repaintContents();
+  });
 }
 
 void TripLocation::renderGL()
 {
   if (this->bufferDirty) {
-    this->glBuffer.setData(GL_ARRAY_BUFFER, this->vertices.size()*sizeof(float), &this->vertices[0], GL_DYNAMIC_DRAW);
+    this->glBuffer.setData(GL_ARRAY_BUFFER, this->vertices.size()*sizeof(float), this->vertices.data(), GL_DYNAMIC_DRAW);
     this->bufferDirty = false;
   }
 

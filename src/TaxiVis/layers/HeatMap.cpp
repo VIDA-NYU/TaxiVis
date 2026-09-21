@@ -6,6 +6,7 @@
 #include "util/colorbar.h"
 #include "util/heatedobjectscale.h"
 #include <QVector2D>
+#include <array>
 
 // Qt's OpenGL headers undef GLEW macros, so we need to redefine them
 #ifndef glBindBuffer
@@ -92,8 +93,10 @@ float HeatMap::getMaxValue()
 
 void HeatMap::setMaxValue(float value)
 {
+  if (maxValue==value) return;
   this->maxValue = value;
-  this->textureDirty = true;
+  updateColorBar();
+  if (binCounts) buildHeatMapTexture();
 }
 
 void HeatMap::setEnabled(bool r)
@@ -119,7 +122,7 @@ void HeatMap::setNormalized(bool n)
 {
   if (this->normalized!=n) {
     this->normalized = n;
-    this->textureDirty = true;
+    if (binCounts) buildHeatMapTexture();
     this->updateColorBar();
   }
 }
@@ -167,6 +170,7 @@ void HeatMap::render(QPainter *painter)
 
 void HeatMap::updateData()
 {
+  cancelComputation();
   this->dataReady = false;
   this->visualDirty = true;
   if (this->enabled)
@@ -184,42 +188,33 @@ inline int coordIndex(float lat, float lon, int width, int height, const QRectF 
 
 void HeatMap::computeVisualData()
 {
-  if (!this->initialized)
-    return;
-  int width = this->fbo->size().width();
-  int height = this->fbo->size().height();
-  this->binCounts.clear();
-  this->binCounts.resize(width*height, 0);
-  this->maxBinCount = 0;
-  
-  KdTrip::TripSet::iterator it;
-  KdTrip::TripSet *selectedTrips = this->geoWidget->getSelectedTrips();
-  Selection::TYPE stype = this->geoWidget->getSelectionType();
-  bool usePickup = stype==Selection::START || stype==Selection::START_AND_END;
-  bool useDropoff = stype==Selection::END || stype==Selection::START_AND_END;
-  for (it=selectedTrips->begin(); it!=selectedTrips->end(); it++) {
-    const KdTrip::Trip *trip = *it;
-    int index[2] = {-1, -1};
-    if (usePickup)
-      index[0] = coordIndex(trip->pickup_lat, trip->pickup_long, width, height, this->region);
-    if (useDropoff)
-      index[1] = coordIndex(trip->dropoff_lat, trip->dropoff_long, width, height, this->region);
-    for (int k=0; k<2; k++)
-      if (index[k]>=0) {
-        this->binCounts[index[k]]++;
-        if (this->binCounts[index[k]]>this->maxBinCount)
-          this->maxBinCount = this->binCounts[index[k]];
+  if (!geoWidget->getSelectedTrips() || !geoWidget->hasCurrentSelection()) return;
+  textureJob.cancel();
+  dataReady=false;
+  const auto trips = *geoWidget->getSelectedTrips();
+  const auto rect = region;
+  const auto size = resolution;
+  const auto type = geoWidget->getSelectionType();
+  countJob.submit([trips, rect, size, type](const Cancellation &cancel) {
+      Counts result; result.bins=std::make_shared<std::vector<int>>(size.width()*size.height(),0);
+      size_t n=0;
+      for (auto trip : trips) {
+          if ((n++ & 1023)==0) cancel.check();
+          int indices[2]={-1,-1};
+          if (type==Selection::START || type==Selection::START_AND_END)
+              indices[0]=coordIndex(trip->pickup_lat,trip->pickup_long,size.width(),size.height(),rect);
+          if (type==Selection::END || type==Selection::START_AND_END)
+              indices[1]=coordIndex(trip->dropoff_lat,trip->dropoff_long,size.width(),size.height(),rect);
+          for (int index : indices) if (index>=0) result.maximum=std::max(result.maximum,++(*result.bins)[index]);
       }
-  }
-
-  this->maxValue = this->maxBinCount;
-  this->updateColorBar();
-
-  this->dataReady = true;
-  this->visualDirty = false;
-  this->textureDirty = true;
-
-  emit maxValueUpdated(this->maxValue);
+      return result;
+  }, [this](Counts result) {
+      binCounts=std::move(result.bins); maxBinCount=result.maximum; maxValue=maxBinCount;
+      visualDirty=false;
+      updateColorBar();
+      emit maxValueUpdated(maxValue);
+      buildHeatMapTexture();
+  });
 }
   
 void HeatMap::initGL()
@@ -232,70 +227,56 @@ void HeatMap::initGL()
 
 void HeatMap::buildHeatMapTexture()
 {
-  glPushAttrib(GL_ALL_ATTRIB_BITS);
-  // This runs inside QPainter::beginNativePainting(), where Qt has loaded
-  // the painter's transform (including the device pixel ratio) into the
-  // modelview matrix. The splat pass below works in texel units of the
-  // FBO, so both matrices must be reset for it and restored afterwards.
-  glMatrixMode(GL_MODELVIEW);
-  glPushMatrix();
-  glLoadIdentity();
-  glMatrixMode(GL_PROJECTION);
-  glPushMatrix();
-  int width = this->fbo->size().width();
-  int height = this->fbo->size().height();
-  glViewport(0, 0, width, height);
-  glLoadIdentity();
-  glOrtho(0, width, 0, height, -99, 99);
-  this->fbo->bind();
-  glClearColor(1, 1, 1, 1);
-  glClear(GL_COLOR_BUFFER_BIT);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);  
-  this->pointTexture.setImage(this->pointImage);
-
-  float hours = this->geoWidget->getSelectionDuration()/3600.0;
-  float delta = 9;
-  glBegin(GL_QUADS);
-  for (int y=0; y<height; y++) {
-    for (int x=0; x<width; x++) {
-      int c = this->normalized?
-        (this->binCounts[y*width+x]*32.0/this->maxValue):
-        ceil(this->binCounts[y*width+x]/hours/2.0*8);
-      for (int k=0; k<c; k++) {
-        glTexCoord2d(0, 0);
-        glVertex2f(y-delta, x-delta);
-        glTexCoord2d(0, 1);
-        glVertex2f(y-delta, x+delta);
-        glTexCoord2d(1, 1);
-        glVertex2f(y+delta, x+delta);
-        glTexCoord2d(1, 0);
-        glVertex2f(y+delta, x-delta);
+  if (!binCounts) return;
+  const auto counts=binCounts;
+  const auto size=resolution;
+  const auto point=pointImage.scaled(18,18,Qt::IgnoreAspectRatio,Qt::SmoothTransformation);
+  const bool normalize=normalized;
+  const float maximum=maxValue;
+  const double hours=std::max(1.0/3600,geoWidget->getSelectionDuration()/3600.0);
+  // Snapshot the color scale on the GUI thread. The worker owns only plain images/numbers.
+  std::array<QRgb,256> colors;
+  for (int i=0; i<256; ++i) {
+      float value=i/255.f;
+      if (value>0.2 && value<0.9) value=ceil(value/0.1)*0.1;
+      auto color=colorScale->getColor(1.0-value);
+      color.setAlphaF(value>=0.9 ? 1-value : 0.7);
+      colors[i]=color.rgba();
+  }
+  textureJob.submit([counts,size,point,normalize,maximum,hours,colors](const Cancellation &cancel) {
+      const int width=size.width(), height=size.height();
+      std::vector<float> transmission(width*height,1.f);
+      for (int lon=0; lon<height; ++lon) {
+          cancel.check();
+          for (int lat=0; lat<width; ++lat) {
+              const int count=(*counts)[lon*width+lat];
+              if (!count) continue;
+              const int repeats=normalize ? (maximum>0 ? int(count*32.0/maximum) : 0) : int(ceil(count/hours*4));
+              if (!repeats) continue;
+              // Equivalent repeated source-over splats without a loop per ride.
+              for (int py=0; py<18; ++py) {
+                  const int y=height-1-lat+py-9;
+                  if (y<0 || y>=height) continue;
+                  for (int px=0; px<18; ++px) {
+                      const int x=lon+px-9;
+                      if (x<0 || x>=width) continue;
+                      const float alpha=qAlpha(point.pixel(px,py))/255.f;
+                      transmission[y*width+x]*=std::pow(1-alpha,repeats);
+                  }
+              }
+          }
       }
-    }
-  }
-  glEnd();
-
-  QImage img = this->fbo->toImage();
-  this->fbo->release();
-  glPopMatrix();
-  glMatrixMode(GL_MODELVIEW);
-  glPopMatrix();
-  glPopAttrib();
-
-  QImage outImg(img.width(), img.height(), QImage::Format_ARGB32);
-  for (int y=0; y<height; y++) {
-    QRgb * in = reinterpret_cast<QRgb*>(img.scanLine(y));
-    QRgb * out = reinterpret_cast<QRgb*>(outImg.scanLine(y));
-    for (int x=0; x<width; x++) {
-      float value = qRed(in[x])/255.0;
-      if (value>0.2 && value<0.9)
-        value = ceil(value/0.1)*0.1;
-      QColor color = this->colorScale->getColor(1.0-value);
-      color.setAlphaF(value>=0.9?(1-value):0.7);
-      out[x] = color.rgba();
-    }
-  }
-  this->textureImage = outImg;
+      QImage image(width,height,QImage::Format_ARGB32);
+      for (int y=0; y<height; ++y) {
+          cancel.check();
+          auto line=reinterpret_cast<QRgb*>(image.scanLine(y));
+          for (int x=0; x<width; ++x) line[x]=colors[std::clamp(int(64+191*transmission[y*width+x]),0,255)];
+      }
+      return image;
+  }, [this](QImage image) {
+      textureImage=std::move(image); textureDirty=true; dataReady=true;
+      geoWidget->repaintContents();
+  });
 }
  
 void HeatMap::renderGL()
@@ -304,7 +285,6 @@ void HeatMap::renderGL()
   glEnable(GL_BLEND);
 
   if (this->textureDirty) {
-    this->buildHeatMapTexture();
     this->heatMapTexture.setImage(this->textureImage);
     this->textureDirty = false;
   }

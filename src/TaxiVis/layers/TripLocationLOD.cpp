@@ -28,11 +28,13 @@ struct Location {
   }
 };
 
-void progressiveLayout(Location *locations, int left, int right, float *pickup, float *dropoff)
+void progressiveLayout(Location *locations, int left, int right, float *pickup, float *dropoff, const Cancellation &cancel)
 {
   std::queue< std::pair<int,int> > q;
   q.push(std::make_pair(left,right));
+  size_t n=0;
   while (!q.empty()) {
+    if ((n++ & 1023)==0) cancel.check();
     std::pair<int,int> bounds = q.front();
     q.pop();
     if (bounds.first<=bounds.second) {
@@ -53,27 +55,28 @@ void progressiveLayout(Location *locations, int left, int right, float *pickup, 
 
 void TripLocationLOD::buildLocations()
 {
-  KdTrip::TripSet::iterator it;
-  KdTrip::TripSet *selectedTrips = this->geoWidget->getSelectedTrips();
-  std::vector<Location> locations;
-  locations.reserve(selectedTrips->size());
-  for (it=selectedTrips->begin(); it!=selectedTrips->end(); it++) {
-    const KdTrip::Trip *trip = *it;
-    Location t;
-    t.pos[0] = trip->pickup_lat;
-    t.pos[1] = trip->pickup_long;
-    t.pos[2] = trip->dropoff_lat;
-    t.pos[3] = trip->dropoff_long;
-    locations.push_back(t);
-  }
-  std::sort(locations.begin(), locations.end());
-  this->vertices.clear();
-  this->vertices.resize(4*locations.size());
-  float *pickup = &this->vertices[0];
-  float *dropoff = pickup + 2*locations.size();
-  progressiveLayout(&locations[0], 0, locations.size()-1, pickup, dropoff);
-  this->bufferDirty = true;
-  this->dataReady = true;
+  if (!geoWidget->getSelectedTrips() || !geoWidget->hasCurrentSelection()) return;
+  const auto trips = *geoWidget->getSelectedTrips();
+  locationJob.submit([trips](const Cancellation &cancel) {
+      std::vector<Location> locations;
+      locations.reserve(trips.size());
+      size_t n=0;
+      for (auto trip : trips) {
+          if ((n++ & 1023)==0) cancel.check();
+          locations.push_back(Location{{trip->pickup_lat,trip->pickup_long,trip->dropoff_lat,trip->dropoff_long}});
+      }
+      size_t comparisons=0;
+      std::sort(locations.begin(),locations.end(),[&](const Location &a,const Location &b) {
+          if ((comparisons++ & 4095)==0) cancel.check();
+          return a<b;
+      });
+      std::vector<float> result(4*locations.size());
+      if (!locations.empty()) progressiveLayout(locations.data(),0,int(locations.size())-1,result.data(),result.data()+2*locations.size(),cancel);
+      return result;
+  }, [this](std::vector<float> result) {
+      vertices=std::move(result); bufferDirty=true; dataReady=true;
+      geoWidget->repaintContents();
+  });
 }
 
 #define USE_VBO 1
@@ -82,7 +85,7 @@ void TripLocationLOD::renderGL()
 {
 #if USE_VBO
   if (this->bufferDirty) {
-    this->glBuffer.setData(GL_ARRAY_BUFFER, this->vertices.size()*sizeof(float), &this->vertices[0], GL_DYNAMIC_DRAW);
+    this->glBuffer.setData(GL_ARRAY_BUFFER, this->vertices.size()*sizeof(float), this->vertices.data(), GL_DYNAMIC_DRAW);
     this->bufferDirty = false;
   }
 #endif  

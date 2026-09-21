@@ -8,6 +8,8 @@
 #include "KdTrip.hpp"
 #include "Group.h"
 #include "SelectionGraph.h"
+#include "AsyncTask.hpp"
+#include "SelectionSnapshot.hpp"
 
 namespace Ui {
 class PlotWidget;
@@ -107,11 +109,12 @@ public:
     PlotAttribute plotAttribute() {return _plotAttribute;}
 
 private:
+    bool suspended=false;
     Ui::PlotWidget *ui;
-    KdTrip::TripSet*selectedTrips;
+    KdTrip::TripSet*selectedTrips=nullptr;
 
     //
-    SelectionGraph* selectionGraph;
+    SelectionGraph* selectionGraph=nullptr;
     QDateTime       startTime;
     QDateTime       endTime;
 
@@ -126,7 +129,12 @@ private:
     float _yMax;
 
 
-    void computePlots();
+    LatestTask<std::map<Group, std::vector<HourSlot>>> computeJob;
+public:
+    void suspendComputation(bool value) { suspended=value; if (value) computeJob.cancel(); }
+    bool computationBusy() const { return computeJob.isBusy(); }
+    void cancelComputation() { computeJob.cancel(); }
+private:
     void setNumBins(int n);
 
     //

@@ -41,6 +41,7 @@ void MainWindow::selectionChanged(){
 void MainWindow::addNewMap() {
   ViewWidget *vw = new ViewWidget( this );
   QMdiSubWindow *sw = ui->mdiArea->addSubWindow( vw );
+  sw->setAttribute(Qt::WA_DeleteOnClose);
   sw->show();
 
   ui->mdiArea->tileSubWindows();

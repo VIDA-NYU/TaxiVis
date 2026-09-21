@@ -90,6 +90,8 @@ GridMap::GridMap(GeographicalViewWidget *gw) :
 
 GridMap::~GridMap()
 {
+  aggregationJob.cancel();
+  for (auto cell : visualCells) delete cell->visual;
   delete this->grid;
 }
 
@@ -157,8 +159,22 @@ void GridMap::render(QPainter *painter)
   }
 }
 
+void GridMap::cancelComputation()
+{
+  aggregationJob.cancel();
+  visualDirty=true;
+  for (auto cell : visualCells) {
+      auto proxy=dynamic_cast<QGraphicsProxyWidget*>(cell->visual);
+      if (auto widget=qobject_cast<TemporalSeriesPlotWidget*>(proxy->widget())) {
+          widget->suspendComputation(true);
+          widget->setEnabled(false);
+      }
+  }
+}
+
 void GridMap::updateData()
 {
+  cancelComputation();
   this->visualDirty = true;
   if (this->enabled && this->dataReady)
     this->computeVisualData();
@@ -166,67 +182,52 @@ void GridMap::updateData()
 
 void GridMap::computeVisualData()
 {
-  this->cellValueRange = QVector2D();
-  this->aggregateBegin();
-  for (int i=0; i<this->grid->size(); i++)
-    this->grid->cells[i].trips.clear();
-  KdTrip::TripSet::iterator it;
-  KdTrip::TripSet *selectedTrips = this->geoWidget->getSelectedTrips();
-  Selection::TYPE stype = this->geoWidget->getSelectionType();
-  bool usePickup = stype==Selection::START || stype==Selection::START_AND_END;
-  bool useDropoff = stype==Selection::END || stype==Selection::START_AND_END;
-  for (it=selectedTrips->begin(); it!=selectedTrips->end(); it++) {
-    const KdTrip::Trip *trip = *it;
-    for (int i=0; i<this->grid->size(); i++) {
-      bool ok = true;
-      if (usePickup)
-        ok = ok && this->grid->cells[i].contains(QPointF(trip->pickup_lat, trip->pickup_long));
-      if (useDropoff)
-        ok = ok && this->grid->cells[i].contains(QPointF(trip->dropoff_lat, trip->dropoff_long));
-      if (ok) {
-        this->aggregateUpdate(this->grid->cells[i].id, trip);
-        this->grid->cells[i].trips.insert(trip);
-        break;
-      }
-    }
-
-    // int srcId = -1, dstId = -1;
-    // for (int i=0; srcId==-1 && i<this->grid->size(); i++)
-    //   if (this->grid->cells[i].contains(QPointF(trip->pickup_lat, trip->pickup_long)))
-    //     srcId = i;
-    // for (int i=0; dstId==-1 && i<this->grid->size(); i++)
-    //   if (this->grid->cells[i].contains(QPointF(trip->dropoff_lat, trip->dropoff_long)))
-    //     dstId = i;
-    // if (srcId!=-1 && dstId!=-1) {
-    //   fprintf(stdout, "%u,%u,%g,%g,%g,%g,%u,%u,%u,%u,%u,%u,%u,%u,%u,%d,%d\n",
-    //           trip->pickup_time,
-    //           trip->dropoff_time,
-    //           trip->pickup_long,
-    //           trip->pickup_lat,
-    //           trip->dropoff_long,
-    //           trip->dropoff_lat,
-    //           trip->id_taxi,
-    //           trip->distance,     // in 0.01 miles unit
-    //           trip->fare_amount,  // in cents
-    //           trip->surcharge,    // in cents
-    //           trip->mta_tax,      // in cents
-    //           trip->tip_amount,   // in cents
-    //           trip->tolls_amount, // in cents
-    //           trip->payment_type,
-    //           trip->passengers,
-    //           srcId,
-    //           dstId
-    //           );
-    // }
+  if (!geoWidget->getSelectedTrips() || !geoWidget->hasCurrentSelection()) return;
+  // Copy geometry only; never send graphics items or live cell repositories to a worker.
+  std::vector<GridCell> cells;
+  for (const auto &cell : grid->cells) {
+      GridCell copy; copy.geometry=cell.geometry; copy.boundingRect=cell.boundingRect; copy.id=cell.id;
+      cells.push_back(copy);
   }
-  this->aggregateEnd();
-  for (int i=0; i<this->grid->size(); i++)
-    this->aggregateOutput(this->grid->cells[i]);
-  for (CellSet::const_iterator it=this->visualCells.begin(); it!=this->visualCells.end(); it++)
-    this->updateCellVisualContents(*it);
-  this->visualDirty = false;
-  
-  this->geoWidget->updateColorBar();  
+  const auto trips = *geoWidget->getSelectedTrips();
+  const auto type = geoWidget->getSelectionType();
+  const auto kind = aggregationKind();
+  aggregationJob.submit([cells, trips, type, kind](const Cancellation &cancel) {
+      Aggregation result;
+      result.counts.resize(cells.size()); result.fares.resize(cells.size()); result.trips.resize(cells.size());
+      if (kind==Flow) result.ratios.resize(cells.size(),std::vector<float>(cells.size()));
+      for (auto &set : result.trips) set.inheritOwners(trips);
+      const bool pickup=type==Selection::START || type==Selection::START_AND_END;
+      const bool dropoff=type==Selection::END || type==Selection::START_AND_END;
+      size_t n=0;
+      for (auto trip : trips) {
+          if ((n++ & 255)==0) cancel.check();
+          for (const auto &cell : cells) {
+              if (pickup && !cell.contains(QPointF(trip->pickup_lat,trip->pickup_long))) continue;
+              if (dropoff && !cell.contains(QPointF(trip->dropoff_lat,trip->dropoff_long))) continue;
+              const int id=cell.id;
+              result.trips[id].insert(trip);
+              if (kind==Count) result.counts[id]++;
+              else if (kind==Fare && trip->distance>=0.25) {
+                  result.counts[id]++; result.fares[id]+=float(trip->fare_amount)/trip->distance;
+              } else if (kind==Flow) {
+                  for (const auto &destination : cells) if (destination.contains(QPointF(trip->dropoff_lat,trip->dropoff_long))) {
+                      result.counts[id]++; result.ratios[id][destination.id]++; break;
+                  }
+              }
+              break;
+          }
+      }
+      return result;
+  }, [this](Aggregation result) {
+      acceptAggregation(result);
+      aggregateEnd();
+      for (auto &cell : grid->cells) { cell.trips=std::move(result.trips[cell.id]); aggregateOutput(cell); }
+      for (auto cell : visualCells) updateCellVisualContents(cell);
+      visualDirty=false;
+      geoWidget->updateColorBar();
+      geoWidget->repaintContents();
+  });
 }
 
 void GridMap::initGL()
@@ -418,6 +419,7 @@ GridCell *GridMap::highlightedCell()
 
 void GridMap::toggleHightlightedCellVisual()
 {
+  if (visualDirty) return;
   GridCell *cell = this->highlightedCell();
   if (cell) {
     if (!cell->visual) {
@@ -468,6 +470,8 @@ void GridMap::updateCellVisualContents(GridCell *cell)
                        this->geoWidget->getSelectedEndTime());
   widget->setSelectionGraph(this->geoWidget->getSelectionGraph());
   widget->setSelectedTripsRepository(&cell->trips);
+  widget->suspendComputation(false);
+  widget->setEnabled(true);
   widget->recomputePlots();
 }
 
@@ -608,7 +612,7 @@ void PickupDropoffGridMap::renderPicking()
     srcId = this->highlightId;
     for (unsigned dstId=0; dstId<this->grid->cells.size(); dstId++) {
       GridCell &cell = this->grid->cells[dstId];
-      if (srcId>=0)
+      if (srcId>=0 && size_t(srcId)<ratios.size())
         cell.value = this->ratios[srcId][dstId];
       else
         cell.value = 0.f;

@@ -1,4 +1,5 @@
 build/
+build-*/
 
 # Large data files
 data/*.csv

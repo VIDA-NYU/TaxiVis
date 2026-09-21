@@ -75,7 +75,6 @@ set(SOURCES
     layers/TripAnimation.cpp
     layers/TripLocation.cpp
     layers/TripLocationLOD.cpp
-    main.cpp
     mainwindow.cpp
     neighborhood.cpp
     neighborhoodgraph.cpp
@@ -126,7 +125,7 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets OpenGL OpenGLWidgets Network PrintSupport)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets OpenGL OpenGLWidgets Network PrintSupport Concurrent)
 add_definitions(-DGL_SILENCE_DEPRECATION)
 
 # Generate Qt files (AUTOMOC/AUTOUIC/AUTORCC handle moc, ui and qrc)
@@ -135,8 +134,9 @@ source_group("Generated" FILES ${UI_FILES})
 
 # Set up paths and start building
 include_directories(${Boost_INCLUDE_DIR} ${OPENGL_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
-add_executable(${PROJECT_NAME} ${SOURCES} ${UI_FILES} ${RESOURCES})
-target_link_libraries(${PROJECT_NAME}
+# Reuse the production widgets in offscreen plotting regression tests.
+add_library(taxivis_widgets STATIC ${SOURCES} ${UI_FILES})
+target_link_libraries(taxivis_widgets PUBLIC
     Qt6::Core
     Qt6::Gui
     Qt6::Widgets
@@ -144,6 +144,27 @@ target_link_libraries(${PROJECT_NAME}
     Qt6::OpenGLWidgets
     Qt6::Network
     Qt6::PrintSupport
+    Qt6::Concurrent
     ${Boost_LIBRARIES}
     ${OPENGL_LIBRARIES}
     ${GLEW_LIBRARY})
+
+add_executable(${PROJECT_NAME} main.cpp ${RESOURCES})
+target_link_libraries(${PROJECT_NAME} PRIVATE taxivis_widgets)
+
+if(BUILD_TESTING)
+    find_package(Qt6 REQUIRED COMPONENTS Test)
+    add_executable(plot_regression ../../tests/plot_regression.cpp ${RESOURCES})
+    target_link_libraries(plot_regression PRIVATE taxivis_widgets Qt6::Test)
+    add_executable(responsiveness_regression ../../tests/responsiveness_regression.cpp ${RESOURCES})
+    target_link_libraries(responsiveness_regression PRIVATE taxivis_widgets Qt6::Test)
+    add_test(NAME responsiveness_regression COMMAND responsiveness_regression)
+    set_tests_properties(responsiveness_regression PROPERTIES TIMEOUT 180 ENVIRONMENT
+        "QT_QPA_PLATFORM=offscreen;TAXIVIS_DATA=${CMAKE_CURRENT_SOURCE_DIR}/../../data/sample_merged_1.kdtrip;TZ=America/New_York")
+    # Measurement aid for the responsiveness scope decision; not a CTest case.
+    add_executable(interaction_bench ../../tests/interaction_bench.cpp ${RESOURCES})
+    target_link_libraries(interaction_bench PRIVATE taxivis_widgets Qt6::Test)
+    add_test(NAME plot_regression COMMAND plot_regression)
+    set_tests_properties(plot_regression PROPERTIES ENVIRONMENT
+        "QT_QPA_PLATFORM=offscreen;TAXIVIS_DATA=${CMAKE_CURRENT_SOURCE_DIR}/../../data/sample_merged_1.kdtrip;TZ=America/New_York")
+endif()

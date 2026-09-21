@@ -2,6 +2,7 @@
 #define HEAT_MAP_HPP
 #include "RenderingLayer.hpp"
 #include "KdTrip.hpp"
+#include "AsyncTask.hpp"
 #include <set>
 #include <vector>
 #include <QList>
@@ -20,6 +21,8 @@ public:
   HeatMap(GeographicalViewWidget *mw);
   virtual ~HeatMap();
 
+  void cancelComputation() { countJob.cancel(); textureJob.cancel(); dataReady=false; visualDirty=true; }
+  bool computationBusy() const { return countJob.isBusy() || textureJob.isBusy(); }
   void        setRegion(const QRectF &rect);
   void        setResolution(const QSize &size);
   void        setPointSize(int pointSize);
@@ -54,6 +57,9 @@ protected:
   void buildHeatMapTexture();
   void updateColorBar();
 
+  struct Counts { std::shared_ptr<std::vector<int>> bins; int maximum=0; };
+  LatestTask<Counts> countJob;
+  LatestTask<QImage> textureJob;
   QSize                   resolution;
   QRectF                  region;
   QSizeF                  binSize;
@@ -63,8 +69,8 @@ protected:
   QImage                  textureImage;
   QImage                  pointImage;
 
-  std::vector<int>        binCounts;
-  int                     maxBinCount;
+  std::shared_ptr<std::vector<int>> binCounts;
+  int                     maxBinCount=0;
   float                   maxValue;
 
   bool                    initialized;

@@ -29,19 +29,11 @@ QueryManager::QueryManager(){
         qCritical() << "Set TAXIVIS_DATA to the path of a .kdtrip file, or place one in" << DATA_DIR;
         exit(1);
     }
-    kdtrip = new KdTrip(fname);
+    kdtrip = std::make_shared<KdTrip>(fname);
 
-    // Count trips by iterating
-    int tripCount = 0;
-    uint32_t minTime = UINT32_MAX, maxTime = 0;
-    KdTrip::Iterator it = kdtrip->begin();
-    KdTrip::Iterator endIt = kdtrip->end();
-    while (it != endIt) {
-        tripCount++;
-        if (it->pickup_time < minTime) minTime = it->pickup_time;
-        if (it->dropoff_time > maxTime) maxTime = it->dropoff_time;
-        it++;
-    }
+    // Structural validation already collected these statistics in one pass.
+    size_t tripCount = kdtrip->tripCount();
+    uint32_t minTime = kdtrip->minPickupTime(), maxTime = kdtrip->maxDropoffTime();
 
     qDebug() << "Taxi trip data loaded successfully";
     qDebug() << "  Number of trips:" << tripCount;
@@ -54,193 +46,42 @@ QueryManager::QueryManager(){
     }
 }
 
-QueryManager::~QueryManager(){
-    if(kdtrip != NULL)
-        delete kdtrip;
+QueryManager::~QueryManager() = default;
+
+KdTrip::TripSet QueryManager::query(std::shared_ptr<const KdTrip> data,
+                                    const SelectionSnapshot &selection,
+                                    QDateTime start, QDateTime end, const Cancellation &cancel) {
+    KdTrip::TripSet out;
+    out.keepAlive(data);
+    if (!start.isValid() || !end.isValid() || start > end) return out;
+    auto execute = [&](const SpatialConstraint &c) {
+        cancel.check();
+        KdTrip::Query query;
+        query.setPickupTimeInterval(start.toSecsSinceEpoch(), end.toSecsSinceEpoch());
+        query.setDropoffTimeInterval(start.toSecsSinceEpoch(), end.toSecsSinceEpoch());
+        if (c.hasPickup) {
+            QRectF r = c.pickup.boundingRect();
+            query.setPickupArea(r.left(), r.top(), r.right(), r.bottom());
+        }
+        if (c.hasDropoff) {
+            QRectF r = c.dropoff.boundingRect();
+            query.setDropoffArea(r.left(), r.top(), r.right(), r.bottom());
+        }
+        auto result = data->execute(query, cancel.flag.get());
+        cancel.check();
+        size_t visited = 0;
+        for (auto it = result.begin(); it != result.end(); ++it) {
+            if ((++visited % 1024) == 0) cancel.check();
+            if (c.matches(it.trip())) out.insert(it.trip());
+        }
+    };
+    if (selection.global) execute(SpatialConstraint());
+    else for (const auto &group : selection.groups)
+        for (const auto &constraint : group.second) execute(constraint);
+    return out;
 }
 
-void QueryManager::queryData(SelectionGraph *queryGraph, QDateTime startDateTime,
-                            QDateTime endDateTime, KdTrip::TripSet &resultSet) {
-    //initial setup
-    assert(queryGraph != NULL);
-    resultSet.clear();
-
-    //
-    QDate startDate = startDateTime.date();
-    QTime startTime = startDateTime.time();
-    QDate endDate   = endDateTime.date();
-    QTime endTime   = endDateTime.time();
-
-    {//if graph is empry
-        if(queryGraph->isEmpty()){
-            //
-            KdTrip::Query query;
-
-            //
-            query.setPickupTimeInterval(query.createTime(startDate.year(),startDate.month(),startDate.day(),startTime.hour(),startTime.minute(),startTime.second()),
-                                        query.createTime(endDate.year(),endDate.month(),endDate.day(),endTime.hour(),endTime.minute(),endTime.second()));
-            query.setDropoffTimeInterval(query.createTime(startDate.year(),startDate.month(),startDate.day(),startTime.hour(),startTime.minute(),startTime.second()),
-                                         query.createTime(endDate.year(),endDate.month(),endDate.day(),endTime.hour(),endTime.minute(),endTime.second()));
-
-            KdTrip::QueryResult result = kdtrip->execute(query);
-            KdTrip::QueryResult::iterator it;
-            for (it=result.begin(); it<result.end(); ++it) {
-                resultSet.insert(it.trip());
-//                qDebug() << "Trip: ";
-//                qDebug() << "    fare: " << it.trip()->fare_amount;
-//                qDebug() << "    distance: " << it.trip()->distance;
-//                qDebug() << "    field1: " << it.trip()->field1;
-//                qDebug() << "    id: " << it.trip()->id_taxi;
-//                qDebug() << "    tip: " << it.trip()->tip_amount;
-//                qDebug() << "    payment type: " << it.trip()->payment_type;
-//                qDebug() << "    passengers: " << (uint)(it.trip()->passengers);
-            }
-
-            return;
-        }
-
-
-    }
-
-
-    //
-    set<Group> groups;
-    map<Group, vector<SelectionGraphNode*> > mapGroupToNodes;
-    map<Group, vector<SelectionGraphEdge*> > mapGroupToEdges;
-    queryGraph->groupNodesAndEdgeByColor(groups,mapGroupToNodes, mapGroupToEdges);
-
-    //edge queries
-    SelectionGraph::EdgeIterator it;
-    SelectionGraph::EdgeIterator edgesBegin;
-    SelectionGraph::EdgeIterator edgesEnd;
-    queryGraph->getEdgeIterator(edgesBegin,edgesEnd);
-    set<int> alreadyProcessedNodes;
-    //int countEdgeQuery = 1;
-    for(it = edgesBegin ; it != edgesEnd ; ++it){
-        //cout << "Executing edge query " << countEdgeQuery++ << endl;
-        SelectionGraphEdge* edge = it->second;
-        SelectionGraphNode* tail = edge->getTail();
-        SelectionGraphNode* head = edge->getHead();
-
-        //
-        KdTrip::Query query;
-        QRectF originRect = tail->getSelection()->boundingBox();
-        query.setPickupArea(originRect.x(),originRect.y(),originRect.x() + originRect.width(),originRect.y() + originRect.height());
-        QRectF destinationRect = head->getSelection()->boundingBox();
-        query.setDropoffArea(destinationRect.x(),destinationRect.y(),destinationRect.x() + destinationRect.width(),destinationRect.y() + destinationRect.height());
-
-//        qDebug() << "   Origin Rect " << originRect;
-//        qDebug() << "   Destination Rect " << destinationRect;
-
-        //
-        query.setPickupTimeInterval(query.createTime(startDate.year(),startDate.month(),startDate.day(),startTime.hour(),startTime.minute(),startTime.second()),
-                                    query.createTime(endDate.year(),endDate.month(),endDate.day(),endTime.hour(),endTime.minute(),endTime.second()));
-        query.setDropoffTimeInterval(query.createTime(startDate.year(),startDate.month(),startDate.day(),startTime.hour(),startTime.minute(),startTime.second()),
-                                     query.createTime(endDate.year(),endDate.month(),endDate.day(),endTime.hour(),endTime.minute(),endTime.second()));
-
-        KdTrip::QueryResult result = kdtrip->execute(query);
-        //cout << "   Query Result " << result.size() << endl;
-        //resultSet.insert(result.begin(),result.end());
-        KdTrip::QueryResult::iterator it;
-        for (it=result.begin(); it<result.end(); ++it) {
-            //
-            if(tail->getSelection()->contains(QPointF(it->pickup_lat,it->pickup_long)) &&
-                    head->getSelection()->contains(QPointF(it->dropoff_lat,it->dropoff_long)))
-                resultSet.insert(it.trip());
-        }
-
-        //
-        alreadyProcessedNodes.insert(tail->getId());
-        alreadyProcessedNodes.insert(head->getId());
-    }
-
-    //cout << "   After edge queries " << resultSet.size() << endl;
-
-    // node queries
-    SelectionGraph::NodeIterator nodesit;
-    SelectionGraph::NodeIterator nodesBegin;
-    SelectionGraph::NodeIterator nodesEnd;
-    queryGraph->getNodeIterator(nodesBegin,nodesEnd);
-    //int countNodeQuery = 1;
-    for(nodesit = nodesBegin ; nodesit != nodesEnd ; ++nodesit){
-        //cout << "Executing Node Query " << countNodeQuery++ << endl;
-        SelectionGraphNode* node = nodesit->second;
-        if(alreadyProcessedNodes.count(node->getId()) > 0)
-            continue;
-
-        //
-        KdTrip::Query query;
-        KdTrip::Query extraQuery;
-
-        //time constraints
-        query.setPickupTimeInterval(query.createTime(startDate.year(),startDate.month(),startDate.day(),startTime.hour(),startTime.minute(),startTime.second()),
-                                    query.createTime(endDate.year(),endDate.month(),endDate.day(),endTime.hour(),endTime.minute(),endTime.second()));
-        query.setDropoffTimeInterval(query.createTime(startDate.year(),startDate.month(),startDate.day(),startTime.hour(),startTime.minute(),startTime.second()),
-                                     query.createTime(endDate.year(),endDate.month(),endDate.day(),endTime.hour(),endTime.minute(),endTime.second()));
-
-        extraQuery.setPickupTimeInterval(query.createTime(startDate.year(),startDate.month(),startDate.day(),startTime.hour(),startTime.minute(),startTime.second()),
-                                         query.createTime(endDate.year(),endDate.month(),endDate.day(),endTime.hour(),endTime.minute(),endTime.second()));
-        extraQuery.setDropoffTimeInterval(query.createTime(startDate.year(),startDate.month(),startDate.day(),startTime.hour(),startTime.minute(),startTime.second()),
-                                          query.createTime(endDate.year(),endDate.month(),endDate.day(),endTime.hour(),endTime.minute(),endTime.second()));
-
-        //
-        if(node->getSelection()->getType() == Selection::START){
-            QRectF originRect = node->getSelection()->boundingBox();
-            query.setPickupArea(originRect.x(),originRect.y(),originRect.x() + originRect.width(),originRect.y() + originRect.height());
-        }
-        else if(node->getSelection()->getType() == Selection::END){
-            QRectF destinationRect = node->getSelection()->boundingBox();
-            query.setDropoffArea(destinationRect.x(),destinationRect.y(),destinationRect.x() + destinationRect.width(),destinationRect.y() + destinationRect.height());
-        }
-        else if(node->getSelection()->getType() == Selection::START_AND_END){
-            //
-            QRectF originRect = node->getSelection()->boundingBox();
-            query.setPickupArea(originRect.x(),originRect.y(),originRect.x() + originRect.width(),originRect.y() + originRect.height());
-
-            //
-            QRectF destinationRect = node->getSelection()->boundingBox();
-            extraQuery.setDropoffArea(destinationRect.x(),destinationRect.y(),destinationRect.x() + destinationRect.width(),destinationRect.y() + destinationRect.height());
-        }
-
-
-        KdTrip::QueryResult result = kdtrip->execute(query);
-        KdTrip::QueryResult::iterator it;
-        //qDebug() << "Result " << result.size() ;
-        for (it=result.begin(); it<result.end(); ++it) {
-            const KdTrip::Trip *trip = it.trip();
-
-            bool startContains = node->getSelection()->contains(QPointF(trip->pickup_lat, trip->pickup_long));
-            bool endContains   = node->getSelection()->contains(QPointF(trip->dropoff_lat, trip->dropoff_long));
-
-            if(node->getSelection()->getType() == Selection::START && !startContains)
-                continue;
-            else if(node->getSelection()->getType() == Selection::END && !endContains)
-                continue;
-            else if(node->getSelection()->getType() == Selection::START_AND_END && !startContains && !endContains)
-                continue;
-
-            resultSet.insert(trip);
-        }
-
-        if(node->getSelection()->getType() == Selection::START_AND_END){
-            KdTrip::QueryResult result = kdtrip->execute(extraQuery);
-            KdTrip::QueryResult::iterator it;
-            for (it=result.begin(); it<result.end(); ++it) {
-                const KdTrip::Trip *trip = it.trip();
-
-                bool startContains = node->getSelection()->contains(QPointF(trip->pickup_lat, trip->pickup_long));
-                bool endContains   = node->getSelection()->contains(QPointF(trip->dropoff_lat, trip->dropoff_long));
-
-                if(node->getSelection()->getType() == Selection::START && !startContains)
-                    continue;
-                else if(node->getSelection()->getType() == Selection::END && !endContains)
-                    continue;
-                else if(node->getSelection()->getType() == Selection::START_AND_END && !startContains && !endContains)
-                    continue;
-
-                resultSet.insert(trip);
-            }
-        }
-    }
-    //cout << "After node queries " << resultSet.size() << endl;
+void QueryManager::queryData(SelectionGraph *graph, QDateTime start, QDateTime end,
+                            KdTrip::TripSet &out) {
+    out = query(kdtrip, SelectionSnapshot::capture(graph), start, end, Cancellation());
 }

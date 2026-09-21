@@ -252,6 +252,7 @@ void TripAnimation::startNextFrame()
 
 void TripAnimation::updateData()
 {
+  pathJob.cancel();
   this->pathDataReady = false;
   QDateTime startTime = this->geoWidget->getSelectedStartTime();
   QDate d = startTime.date();
@@ -332,73 +333,74 @@ void TripAnimation::renderPaths()
 
 void TripAnimation::buildAnimPath()
 {
+  if (!geoWidget->getSelectedTrips() || !geoWidget->hasCurrentSelection()) return;
+  const auto trips=*geoWidget->getSelectedTrips();
+  const auto epoch=globalTime;
+  const CityMap *city=Global::getInstance()->getMap();
+  pathJob.submit([trips, epoch, city](const Cancellation &cancel) {
+  PathData result;
   CityMap::Path path;
   CityMap::IntMap nodeId;
-  CityMap *city = Global::getInstance()->getMap();
   KdTrip::TripSet::iterator it;
-  KdTrip::TripSet *selectedTrips = this->geoWidget->getSelectedTrips();
   uint64_t minPickupTime = (uint64_t)-1;
   uint64_t maxDropoffTime = 0;
-  this->maxTrafficTime = 0;
+  result.maxTrafficTime = 0;
   int cnt = 0;
-  this->progress->setLabelText(QString("Computing %1 Shortest Paths").arg(selectedTrips->size()));
-  this->progress->setRange(0, selectedTrips->size()-1);
-  this->pathVertices.clear();
-  this->pathIndices.clear();
-  this->pathWeights.clear();
-  for (it=selectedTrips->begin(); it!=selectedTrips->end(); it++) {
-    this->progress->setValue(cnt++);
-    QApplication::processEvents();
+  result.pathVertices.clear();
+  result.pathIndices.clear();
+  result.pathWeights.clear();
+  for (it=trips.begin(); it!=trips.end(); it++) {
+    cancel.check();
 
     const KdTrip::Trip *trip = *it;
     int src = city->mapToIntersection(CityMap::Location(trip->pickup_lat, trip->pickup_long));
     int dst = city->mapToIntersection(CityMap::Location(trip->dropoff_lat, trip->dropoff_long));
-    if (src!=-1 && dst!=-1 && city->findShortestPath(src, dst, path)) {
+    if (src!=-1 && dst!=-1 && city->computeShortestPath(src, dst, path)) {
       float totalTime = 0;
-      int wId = this->pathWeights.size();
+      int wId = result.pathWeights.size();
       for (int i=path.size()-1; i>0; i--) {
         int srcId, dstId;
         CityMap::IntMap::iterator imi = nodeId.find(path[i]);
         if (imi==nodeId.end()) {
-          srcId = this->pathVertices.size()/4;
+          srcId = result.pathVertices.size()/4;
           nodeId[path[i]] = srcId;
-          this->pathVertices.push_back(city->getIntersection(path[i]).lon);
-          this->pathVertices.push_back(lat2worldY(city->getIntersection(path[i]).lat));
-          this->pathVertices.push_back(0);
-          this->pathVertices.push_back(0);
+          result.pathVertices.push_back(city->getIntersection(path[i]).lon);
+          result.pathVertices.push_back(lat2worldY(city->getIntersection(path[i]).lat));
+          result.pathVertices.push_back(0);
+          result.pathVertices.push_back(0);
         }
         else
           srcId = (*imi).second;
         imi = nodeId.find(path[i-1]);
         if (imi==nodeId.end()) {
-          dstId = this->pathVertices.size()/4;
+          dstId = result.pathVertices.size()/4;
           nodeId[path[i-1]] = dstId;
-          this->pathVertices.push_back(city->getIntersection(path[i-1]).lon);
-          this->pathVertices.push_back(lat2worldY(city->getIntersection(path[i-1]).lat));
-          this->pathVertices.push_back(0);
-          this->pathVertices.push_back(0);
+          result.pathVertices.push_back(city->getIntersection(path[i-1]).lon);
+          result.pathVertices.push_back(lat2worldY(city->getIntersection(path[i-1]).lat));
+          result.pathVertices.push_back(0);
+          result.pathVertices.push_back(0);
         }
         else
           dstId = (*imi).second;
 
-        this->pathIndices.push_back(srcId);
-        this->pathIndices.push_back(dstId);
-        this->pathIndices.push_back(this->pathWeights.size()/4);
+        result.pathIndices.push_back(srcId);
+        result.pathIndices.push_back(dstId);
+        result.pathIndices.push_back(result.pathWeights.size()/4);
 
-        this->pathWeights.push_back(totalTime);
+        result.pathWeights.push_back(totalTime);
         totalTime += city->getStreetWeight(CityMap::Street(path[i], path[i-1]));
-        this->pathWeights.push_back(totalTime);
-        this->pathWeights.push_back(0);
-        this->pathWeights.push_back(0);
+        result.pathWeights.push_back(totalTime);
+        result.pathWeights.push_back(0);
+        result.pathWeights.push_back(0);
       }
       totalTime = (trip->dropoff_time-trip->pickup_time)/totalTime;
-      for (unsigned i=wId; i<this->pathWeights.size(); i+=4) {
-        this->pathWeights[i] = this->pathWeights[i]*totalTime+(trip->pickup_time-this->globalTime);
-        this->pathWeights[i+1] = this->pathWeights[i+1]*totalTime+(trip->pickup_time-this->globalTime);
+      for (unsigned i=wId; i<result.pathWeights.size(); i+=4) {
+        result.pathWeights[i] = result.pathWeights[i]*totalTime+(trip->pickup_time-epoch);
+        result.pathWeights[i+1] = result.pathWeights[i+1]*totalTime+(trip->pickup_time-epoch);
       }
-      for (unsigned i=wId; i<this->pathWeights.size(); i+=4) {
-        this->pathWeights[i+2] = this->pathWeights[wId];
-        this->pathWeights[i+3] = this->pathWeights[this->pathWeights.size()-3];
+      for (unsigned i=wId; i<result.pathWeights.size(); i+=4) {
+        result.pathWeights[i+2] = result.pathWeights[wId];
+        result.pathWeights[i+3] = result.pathWeights[result.pathWeights.size()-3];
       }
       if (trip->pickup_time<minPickupTime)
         minPickupTime = trip->pickup_time;
@@ -406,18 +408,21 @@ void TripAnimation::buildAnimPath()
         maxDropoffTime = trip->dropoff_time;
     }
   }
-  this->pathGeomVertexCount = this->pathVertices.size()/4;
-  for (unsigned i=2; i<this->pathIndices.size(); i+=3)
-    this->pathIndices[i] += this->pathGeomVertexCount;
-  for (unsigned i=0; i<this->pathWeights.size(); i++) {
-    this->pathVertices.push_back(this->pathWeights[i]);
-    if (i%4<2 && this->maxTrafficTime<this->pathWeights[i])
-      this->maxTrafficTime = this->pathWeights[i];
+  result.pathGeomVertexCount = result.pathVertices.size()/4;
+  for (unsigned i=2; i<result.pathIndices.size(); i+=3)
+    result.pathIndices[i] += result.pathGeomVertexCount;
+  for (unsigned i=0; i<result.pathWeights.size(); i++) {
+    result.pathVertices.push_back(result.pathWeights[i]);
+    if (i%4<2 && result.maxTrafficTime<result.pathWeights[i])
+      result.maxTrafficTime = result.pathWeights[i];
   }
-  this->pathBufferDirty = true;
-  this->pathDataReady = true;
-  this->trafficTime = 0;
-  // fprintf(stderr, ">>>> %d %llu\n", this->maxTrafficTime, maxDropoffTime-minPickupTime);
-
-  this->setFrameCount(this->maxTrafficTime+this->trailingPeriod());
+  return result;
+  }, [this](PathData result) {
+      pathVertices=std::move(result.pathVertices); pathWeights=std::move(result.pathWeights);
+      pathIndices=std::move(result.pathIndices); pathGeomVertexCount=result.pathGeomVertexCount;
+      maxTrafficTime=result.maxTrafficTime;
+      pathBufferDirty=true; pathDataReady=true; trafficTime=0;
+      setFrameCount(maxTrafficTime+trailingPeriod());
+      geoWidget->repaintContents();
+  });
 }

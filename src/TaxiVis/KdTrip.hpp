@@ -7,6 +7,12 @@
 #include <float.h>
 #include <vector>
 #include <cstddef>
+#include <cstring>
+#include <cassert>
+#include <stdexcept>
+#include <algorithm>
+#include <memory>
+#include <atomic>
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/unordered_set.hpp>
@@ -42,7 +48,33 @@ public:
         //           (pickup_time  == v.pickup_time && dropoff_time == v.dropoff_time && id_taxi < v.id_taxi));
         // }
     };
-    typedef boost::unordered_set<const Trip*> TripSet;
+    static_assert(sizeof(Trip) == 56, "Unexpected Trip binary layout");
+    // Copy-on-write pointer set: taking a worker snapshot is O(1). Iteration
+    // is read-only; mutators detach, so GUI edits never race with readers.
+    // Optional owners keep mapped or synthetic trip storage alive for jobs.
+    class TripSet {
+        using Set = boost::unordered_set<const Trip*>;
+        std::shared_ptr<Set> data_ = std::make_shared<Set>();
+        std::vector<std::shared_ptr<const void>> owners_;
+        void detach() { if (!data_.unique()) data_ = std::make_shared<Set>(*data_); }
+    public:
+        using iterator = Set::const_iterator;
+        using const_iterator = Set::const_iterator;
+        iterator begin() const { return data_->begin(); }
+        iterator end() const { return data_->end(); }
+        size_t size() const { return data_->size(); }
+        bool empty() const { return data_->empty(); }
+        size_t count(const Trip *trip) const { return data_->count(trip); }
+        iterator find(const Trip *trip) const { return data_->find(trip); }
+        void insert(const Trip *trip) { detach(); data_->insert(trip); }
+        template<class It> void insert(It first, It last) { detach(); data_->insert(first, last); }
+        void erase(iterator it) { const Trip *trip = *it; detach(); data_->erase(trip); }
+        void clear() { data_ = std::make_shared<Set>(); owners_.clear(); }
+        void swap(TripSet &other) { data_.swap(other.data_); owners_.swap(other.owners_); }
+        void keepAlive(std::shared_ptr<const void> owner) { owners_.push_back(std::move(owner)); }
+        void inheritOwners(const TripSet &other) { owners_.insert(owners_.end(), other.owners_.begin(), other.owners_.end()); }
+        void unite(const TripSet &other) { insert(other.begin(), other.end()); inheritOwners(other); }
+    };
     // typedef std::set<const Trip*> TripSet;
 
     struct Query
@@ -161,6 +193,7 @@ public:
         uint32_t median_value;
     };
 #pragma pack(pop)
+    static_assert(sizeof(KdNode) == 12, "Unexpected KdNode binary layout");
 
     // Number of KdNodes occupied by one leaf: the leaf node plus enough
     // extra nodes to hold the Trip stored starting at its median_value.
@@ -200,17 +233,20 @@ public:
 public:
     KdTrip(const std::string & treeFileName)
     {
-        this->numNodesPerTrip = 1+((sizeof(KdTrip::Trip) + 8)/sizeof(KdNode));
         this->fTree.open(treeFileName);
         this->nodes = reinterpret_cast<const KdNode*>(fTree.data());
         size_t nodeCount = this->fTree.size()/sizeof(KdNode);
+        if (nodeCount == 0 || fTree.size() % sizeof(KdNode) != 0)
+            throw std::runtime_error("Invalid kdtrip file: empty or partial node");
         this->endNode = this->nodes+nodeCount;
+        validate(nodeCount);
     }
 
     Iterator begin()
     {
         const KdNode *node = this->nodes;
         while (node<this->endNode && node->child_node!=0) node++;
+        if (node == this->endNode) return end();
         return Iterator(reinterpret_cast<const Trip*>(&(node->median_value)), this->endNode);
     }
 
@@ -219,7 +255,11 @@ public:
         return Iterator(reinterpret_cast<const Trip*>(this->endNode), this->endNode);
     }
 
-    QueryResult execute(const Query &q) {
+    size_t tripCount() const { return tripCount_; }
+    uint32_t minPickupTime() const { return minPickupTime_; }
+    uint32_t maxDropoffTime() const { return maxDropoffTime_; }
+
+    QueryResult execute(const Query &q, const std::atomic_bool *cancel = nullptr) const {
         uint32_t range[7][2] = {
             {q.minPickupTime, q.maxPickupTime},
             {q.minDropoffTime, q.maxDropoffTime},
@@ -231,7 +271,7 @@ public:
         };
         QueryResult result;
         result.trips = boost::shared_ptr<TripVector>(new TripVector());
-        searchKdTree(nodes, 0, range, 0, q, result);
+        searchKdTree(range, q, result, cancel);
         // std::sort(result.trips->begin(), result.trips->end());
         return result;
     }
@@ -243,37 +283,90 @@ private:
     boost::iostreams::mapped_file_source fTree;
     const KdNode* nodes;
     const KdNode *endNode;
-    int     numNodesPerTrip;
 
-    inline bool inRange(uint32_t value, uint32_t range[2]) {
-        return (range[0]<=value) && (value<=range[1]);
+    size_t tripCount_ = 0;
+    uint32_t minPickupTime_ = UINT32_MAX;
+    uint32_t maxDropoffTime_ = 0;
+
+    // Validate every occupied slot before exposing pointers to callers. The
+    // builder allocates children after parents, and each slot belongs to just
+    // one node or leaf payload. This rejects cycles, aliases, and stray data.
+    void validate(size_t nodeCount) {
+        std::vector<bool> occupied(nodeCount, false);
+        std::vector<size_t> pending(1, 0);
+        size_t occupiedCount = 0;
+        while (!pending.empty()) {
+            size_t index = pending.back();
+            pending.pop_back();
+            if (index >= nodeCount || occupied[index])
+                throw std::runtime_error("Invalid kdtrip file: overlapping or out-of-range node");
+            const KdNode &node = nodes[index];
+            size_t span = node.child_node == 0 ? kLeafNodeSpan : 1;
+            if (span > nodeCount - index)
+                throw std::runtime_error("Invalid kdtrip file: truncated leaf");
+            for (size_t i = index; i < index + span; ++i) {
+                if (occupied[i])
+                    throw std::runtime_error("Invalid kdtrip file: overlapping leaf");
+                occupied[i] = true;
+                ++occupiedCount;
+            }
+            if (node.child_node == 0) {
+                const Trip *trip = reinterpret_cast<const Trip*>(&node.median_value);
+                ++tripCount_;
+                minPickupTime_ = std::min(minPickupTime_, trip->pickup_time);
+                maxDropoffTime_ = std::max(maxDropoffTime_, trip->dropoff_time);
+            } else if (node.child_node != UINT64_MAX) {
+                if (node.child_node <= index || node.child_node >= nodeCount)
+                    throw std::runtime_error("Invalid kdtrip file: invalid child offset");
+                size_t left = static_cast<size_t>(node.child_node);
+                size_t leftSpan = nodes[left].child_node == 0 ? kLeafNodeSpan : 1;
+                if (leftSpan >= nodeCount - left)
+                    throw std::runtime_error("Invalid kdtrip file: missing right child");
+                pending.push_back(left + leftSpan);
+                pending.push_back(left);
+            }
+        }
+        if (occupiedCount != nodeCount || tripCount_ == 0)
+            throw std::runtime_error("Invalid kdtrip file: unreachable data or no trips");
     }
 
-    void searchKdTree(const KdNode *nodes, uint32_t root, uint32_t range[7][2], int depth, const Query &query, QueryResult &result) {
-        const KdNode *node = nodes + root;
-        if (node->child_node==-1) return;
-        if (node->child_node==0) {
-            const Trip *candidate = reinterpret_cast<const Trip*>(&(node->median_value));
-            if (query.isMatched(candidate))
-                result.trips->push_back(candidate);
-            return;
-        }
-        int rangeIndex = depth%7;
-        uint32_t median = node->median_value;
-        if (range[rangeIndex][0]<=median)
-            searchKdTree(nodes, node->child_node, range, depth+1, query, result);
-        if (range[rangeIndex][1]>median) {
-            int nextNode = node->child_node+1;
-            if (nodes[node->child_node].child_node==0)
-                nextNode+=numNodesPerTrip;
-            searchKdTree(nodes, nextNode, range, depth+1, query, result);
+    void searchKdTree(uint32_t range[7][2], const Query &query, QueryResult &result, const std::atomic_bool *cancel) const {
+        // Use an explicit stack: legacy indexes with repeated values can be
+        // very deep, so recursive traversal can exhaust the process stack.
+        typedef std::pair<size_t, unsigned> SearchNode;
+        std::vector<SearchNode> pending(1, SearchNode(0, 0));
+        size_t visited = 0;
+        while (!pending.empty()) {
+            if ((++visited % 1024) == 0 && cancel && cancel->load(std::memory_order_relaxed)) break;
+            SearchNode current = pending.back();
+            pending.pop_back();
+            const KdNode *node = nodes + current.first;
+            if (node->child_node == UINT64_MAX) continue;
+            if (node->child_node == 0) {
+                const Trip *candidate = reinterpret_cast<const Trip*>(&node->median_value);
+                if (query.isMatched(candidate)) result.trips->push_back(candidate);
+                continue;
+            }
+            unsigned dimension = current.second;
+            unsigned nextDimension = (dimension + 1) % 7;
+            size_t left = static_cast<size_t>(node->child_node);
+            // Existing builders can put values equal to the median on either
+            // side. Inclusive bounds must visit both sides at equality.
+            if (range[dimension][1] >= node->median_value) {
+                size_t right = left + (nodes[left].child_node == 0 ? kLeafNodeSpan : 1);
+                pending.push_back(SearchNode(right, nextDimension));
+            }
+            if (range[dimension][0] <= node->median_value)
+                pending.push_back(SearchNode(left, nextDimension));
         }
     }
 
-    uint32_t float2uint(float f) {
-        uint32_t t(*((uint32_t*)&f));
+    static uint32_t float2uint(float f) {
+        uint32_t t;
+        std::memcpy(&t, &f, sizeof(t));
         return t ^ ((-(t >> 31)) | 0x80000000);
     }
+
 };
 
 inline u_int32_t getExtraFieldValue(const KdTrip::Trip* trip,int i){
@@ -291,7 +384,7 @@ inline u_int32_t getExtraFieldValue(const KdTrip::Trip* trip,int i){
         return trip->field4;
         break;
     default:
-        assert(false);
+        throw std::out_of_range("Invalid extra field index");
     }
 }
 

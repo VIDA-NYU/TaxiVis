@@ -1,9 +1,0 @@
-{
-	"InstallScripts" : 
-	[
-		"/Users/csilva/src/TaxiVis/build-qt6/cmake_install.cmake",
-		"/Users/csilva/src/TaxiVis/build-qt6/src/preprocess/cmake_install.cmake",
-		"/Users/csilva/src/TaxiVis/build-qt6/src/TaxiVis/cmake_install.cmake"
-	],
-	"Parallel" : false
-}

@@ -1,41 +1,41 @@
 # TaxiVis
 
-A visual analytics application for exploring NYC taxi trip data using Qt5 and OpenGL.
+A visual analytics application for exploring NYC taxi trip data using Qt6 and OpenGL.
 
-## Current Status (Qt5 Migration)
+## Current Status (Qt6 Migration)
 
-**✅ Complete:** Qt5 migration finished! All features working including OpenStreetMap tile-based geographic visualization.
+**In progress:** The `qt6` branch builds against Qt 6. Core map functionality has been checked; the remaining interactive checks are tracked in [PLAN.md](PLAN.md).
 
 ## 1. Building from Source
 
 ### 1.1 Dependencies
 
 **Required:**
-- CMake 3.10 or higher
-- Qt 5 (5.15+ recommended)
-- Qt5 modules: Core, Gui, Widgets, OpenGL, Network, PrintSupport
+- CMake 3.16 or higher
+- Qt 6
+- Qt6 modules: Core, Gui, Widgets, OpenGL, OpenGLWidgets, Network, PrintSupport, Concurrent
 - OpenGL/GLEW 2.2+
 - Boost 1.42+ (components: iostreams, filesystem, timer)
 
 **macOS Installation (Homebrew):**
 ```bash
-brew install cmake qt@5 glew boost
+brew install cmake qt glew boost
 ```
 
 **Linux Installation (Ubuntu/Debian):**
 ```bash
-sudo apt-get install cmake qt5-default libqt5opengl5-dev libglew-dev libboost-all-dev
+sudo apt-get install cmake qt6-base-dev libqt6opengl6-dev libglew-dev libboost-all-dev
 ```
 
 ### 1.2 Compiling with CMake
 
-**Build everything (recommended):**
+**Build everything (recommended; Python 3 is needed for tests):**
 ```bash
 mkdir build
 cd build
 
-# macOS - set Qt5 path
-export CMAKE_PREFIX_PATH="/opt/homebrew/opt/qt@5"
+# macOS - set Qt6 path
+export CMAKE_PREFIX_PATH="/opt/homebrew/opt/qt"
 
 # Configure and build both TaxiVis and preprocessing tools
 cmake ..
@@ -54,11 +54,11 @@ This builds:
 
 ### 1.3 Build Troubleshooting
 
-**Qt5 not found:** Set `CMAKE_PREFIX_PATH` to your Qt5 installation:
+**Qt6 not found:** Set `CMAKE_PREFIX_PATH` to your Qt6 installation:
 ```bash
-export CMAKE_PREFIX_PATH="/path/to/qt5"
-# macOS Homebrew: /opt/homebrew/opt/qt@5
-# Linux: /usr/lib/x86_64-linux-gnu/qt5
+export CMAKE_PREFIX_PATH="/path/to/qt6"
+# macOS Homebrew: /opt/homebrew/opt/qt
+# Linux: /usr/lib/x86_64-linux-gnu/cmake/Qt6
 ```
 
 **GLEW not found:** Ensure GLEW is installed via your package manager.
@@ -109,8 +109,10 @@ Taxi trip data loaded successfully
   Time range: "2013-01-01 00:00" to "2013-02-01 10:33"
 ```
 
-The `.kdtrip` file is memory-mapped, so a full month (about 1.3 GB) opens in
-well under a second and the process stays small until you query it.
+The `.kdtrip` file is memory-mapped. Startup validates its structure and collects
+trip count and time range in one pass; this reads the full index, so startup time
+and resident memory depend on dataset size and the filesystem cache. Invalid
+node offsets and truncated records are rejected with an error.
 
 ### 2.3 Available Features
 
@@ -329,23 +331,19 @@ rebuild is needed. A File → Open dialog is not implemented yet.
 
 ### 3.5 Data Format Reference
 
-**Binary Trip Structure (48 bytes):**
-- `uint32_t pickup_time` - Unix timestamp (seconds since epoch)
-- `uint32_t dropoff_time` - Unix timestamp
-- `float pickup_long` - Pickup longitude
-- `float pickup_lat` - Pickup latitude
-- `float dropoff_long` - Dropoff longitude
-- `float dropoff_lat` - Dropoff latitude
-- `uint16_t id_taxi` - Taxi/medallion ID
-- `uint16_t distance` - Distance in 0.01 miles (divide by 100)
-- `uint16_t fare_amount` - Fare in cents (divide by 100)
-- `uint16_t surcharge` - Surcharge in cents
-- `uint16_t mta_tax` - MTA tax in cents
-- `uint16_t tip_amount` - Tip in cents
-- `uint16_t tolls_amount` - Tolls in cents
-- `uint8_t payment_type` - Payment method code
-- `uint8_t passengers` - Number of passengers
-- `uint16_t field1, field2, field3, field4` - Custom/region fields
+**Binary Trip Structure (56 bytes, in storage order):**
+- `uint32_t pickup_time`, `dropoff_time` — Unix timestamps
+- `float pickup_long`, `pickup_lat`, `dropoff_long`, `dropoff_lat` — coordinates
+- `uint32_t field1, field2, field3, field4` — custom/region fields
+- `uint16_t id_taxi` — taxi/medallion code
+- `uint16_t distance` — hundredths of a mile
+- `uint16_t fare_amount, surcharge, mta_tax, tip_amount, tolls_amount` — cents
+- `uint8_t payment_type`, `passengers` — payment code and passenger count
+
+The legacy `.trip` and `.kdtrip` formats use native byte order and have no
+version header. Structural validation detects malformed layouts, but cannot
+identify every incompatible or semantically corrupted dataset. Existing valid
+indexes remain supported. Queries include both endpoints of each range.
 
 ## 4. Architecture
 
@@ -360,21 +358,77 @@ See [CLAUDE.md](CLAUDE.md) for detailed architecture documentation.
 
 ## 5. Development
 
-**Qt5 Migration Status:**
-- ✅ All Qt4 → Qt5 API migrations complete
-- ✅ OpenGL rendering updated (QGL → QOpenGL)
-- ✅ Boost filesystem compatibility fixed
-- ✅ Map visualization restored with OpenStreetMap tile-based widget
-- ✅ QtWebKit dependency removed (replaced with QNetworkAccessManager)
+The current branch uses Qt 6, Boost, and GLEW, with a compatibility OpenGL
+renderer and vendored QCustomPlot 2.1.1. The renderer still uses legacy
+OpenGL APIs; the Qt migration does not remove that dependency. See [PLAN.md](PLAN.md)
+for completed and outstanding runtime checks. Linux runtime behavior is unverified.
 
-**Build with:**
-- Qt 5.15.17
-- Boost 1.89.0
-- GLEW 2.2.0
-- CMake 4.1+
+**Build and run automated data checks:**
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/opt/homebrew/opt/qt
+cmake --build build -j4
+ctest --test-dir build --output-on-failure
+```
 
-**Tested on:**
-- macOS 26.0.1 (Apple Silicon)
+Tests require Python 3 and Qt6 Test and are enabled by default (`-DBUILD_TESTING=OFF` disables
+them). They exercise the real index builder, compare queries with brute-force
+filtering, and check malformed-file rejection. Offscreen plot tests exercise
+the production widgets: aggregation, bin edits, local-time labels, histogram
+filtering, time-range selection, duplicate scatter coordinates, group colours,
+and linked exploration axes. They use synthetic fixtures and the bundled sample.
+The `testQuery` utility remains available for printing trips; it is not the regression suite.
+
+To check a full January dataset without modifying it:
+```bash
+./build/src/preprocess/kdtrip_check ~/data/FOIL2013/processed/2013_01.kdtrip 14776615 full
+```
+The count argument must match the dataset. The `full` mode bounds query result
+sizes while checking all seven indexed dimensions against full linear scans.
+
+**QCustomPlot:** Version 2.1.1 is pinned in-tree. Its source URL, checksum,
+license, and small QtPrintSupport include patch are recorded in
+[src/TaxiVis/third_party/QCustomPlot.md](src/TaxiVis/third_party/QCustomPlot.md).
+The plots use CPU painting; QCustomPlot's optional OpenGL backend is disabled.
+Interactive queries, exploration batches, plot aggregation/sorting, and map-layer
+preparation run on Qt Concurrent workers. Each consumer keeps one active request
+and coalesces edits into one latest pending request. Immutable spatial/time and
+copy-on-write trip snapshots isolate workers from live widgets; canceled results
+cannot overwrite a newer selection. Closing a view cancels without waiting.
+
+An “Updating selection…” indicator and disabled result actions distinguish an
+in-flight query from committed results. CSV export runs against the committed
+snapshot, writes a temporary file, and publishes atomically only if the view is
+still open. Later selection edits do not change an export already in progress.
+Exploration is cancellable and owns its generated, time-aligned trip storage.
+
+Final QWidget painting and GL buffer/texture uploads remain on the GUI thread.
+Very dense scatter plots can still take time to paint; this is distinct from the
+background aggregation. Heat-map splats/colorization are computed into a QImage
+on a worker, using source-over transmission instead of repeated per-ride GL draws;
+minor pixel rounding differences from the former GPU pass are possible. Animation
+routing uses the immutable road graph without its mutable shared path cache.
+
+To check plots against the full local dataset and save review images:
+```bash
+QT_QPA_PLATFORM=offscreen TZ=America/New_York \
+TAXIVIS_DATA="$HOME/data/FOIL2013/processed/2013_01.kdtrip" \
+TAXIVIS_PLOT_OUTPUT="$PWD/build/plot-renders" \
+./build/src/TaxiVis/plot_regression
+```
+This validates loading the full file and plots up to 10,000 trips from January 13;
+it does not render all 14.8 million trips at once.
+
+The `responsiveness_regression` suite covers request coalescing, stale-result
+rejection, rapid query/bin edits, linked plots, layer replacement, committed CSV
+exports, canceled exploration, stale attribute dialogs, and closing views during
+work. It suppresses unsupported OpenGL viewport painting on the offscreen Qt
+platform; it does not validate native GL drawing. Run it with the full file using:
+
+```bash
+QT_QPA_PLATFORM=offscreen TZ=America/New_York \
+TAXIVIS_DATA="$HOME/data/FOIL2013/processed/2013_01.kdtrip" \
+./build/src/TaxiVis/responsiveness_regression
+```
 
 ## 6. References
 

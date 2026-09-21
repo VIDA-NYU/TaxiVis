@@ -4,6 +4,7 @@
 #include <QFont>
 #include <QVector2D>
 #include <vector>
+#include "AsyncTask.hpp"
 
 class GeographicalViewWidget;
 class QOpenGLShaderProgram;
@@ -22,6 +23,8 @@ public:
   TripAnimation(GeographicalViewWidget *mw);
   ~TripAnimation();
 
+  void cancelComputation() { pathJob.cancel(); pathDataReady=false; }
+  bool computationBusy() const { return pathJob.isBusy(); }
   void initGL();
   void setEnabled(bool r);
   bool isSupported() const;
@@ -73,6 +76,12 @@ private:
   Ui::TripAnimationConfig  *uiConfig;
   Ui::TripAnimationToolBar *uiToolBar;
 
+  struct PathData {
+      std::vector<float> pathVertices, pathWeights;
+      std::vector<int> pathIndices;
+      int pathGeomVertexCount=0, maxTrafficTime=0;
+  };
+  LatestTask<PathData> pathJob;
   bool playing;
   bool pathDataReady;
   bool pathBufferDirty;

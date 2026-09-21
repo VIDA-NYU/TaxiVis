@@ -52,6 +52,33 @@ ViewWidget::ViewWidget(QWidget *parent) :
 
     //
     connect(ui->geographicalView,SIGNAL(datasetUpdated()),this,SLOT(geoWidgetUpdatedData()));
+    connect(ui->geographicalView, &GeographicalViewWidget::queryBusyChanged, this, [this](bool busy) {
+        ui->exportButton->setEnabled(!busy && ui->geographicalView->hasCurrentSelection() && !exportJob.isBusy());
+        ui->exploreButton->setEnabled(!busy && ui->geographicalView->hasCurrentSelection());
+        ui->geographicalView->setToolTip(busy ? tr("Updating selection…") : QString());
+        ui->timeSeriesWidget->suspendComputation(busy || !ui->geographicalView->hasCurrentSelection());
+        ui->histogramWidget->suspendComputation(busy || !ui->geographicalView->hasCurrentSelection());
+        ui->scatterPlotWidget->suspendComputation(busy || !ui->geographicalView->hasCurrentSelection());
+        ui->tabWidget->setEnabled(!busy && ui->geographicalView->hasCurrentSelection());
+    });
+    connect(ui->geographicalView, &GeographicalViewWidget::queryFailed, this, &ViewWidget::backgroundError);
+    exportJob.onBusy = [this](bool busy) { ui->exportButton->setEnabled(!busy && !ui->geographicalView->queryBusy()); };
+    exportJob.onError = [this](const QString &error) { emit backgroundError(error); };
+    explorationJob.onError = exportJob.onError;
+    connect(this, &ViewWidget::backgroundError, this, [this](const QString &error) {
+        auto box = new QMessageBox(QMessageBox::Warning, tr("Background operation failed"), error, QMessageBox::Ok, this);
+        box->setAttribute(Qt::WA_DeleteOnClose);
+        box->open();
+    });
+    ui->exportButton->setEnabled(!ui->geographicalView->queryBusy());
+    ui->exploreButton->setEnabled(!ui->geographicalView->queryBusy());
+    if (ui->geographicalView->queryBusy()) {
+        ui->timeSeriesWidget->suspendComputation(true);
+        ui->histogramWidget->suspendComputation(true);
+        ui->scatterPlotWidget->suspendComputation(true);
+        ui->tabWidget->setEnabled(false);
+    }
+
 
     // Autoexclude the Selection Modes
     QButtonGroup *buttonGroup = new QButtonGroup;
@@ -87,10 +114,26 @@ ViewWidget::ViewWidget(QWidget *parent) :
 
 }
 
+void ViewWidget::closeEvent(QCloseEvent *event)
+{
+    explorationJob.cancel(); exportJob.cancel();
+    ui->geographicalView->cancelQuery();
+    ui->timeSeriesWidget->cancelComputation();
+    ui->histogramWidget->cancelComputation();
+    ui->scatterPlotWidget->cancelComputation();
+    QWidget::closeEvent(event);
+}
+
 ViewWidget::~ViewWidget()
 {
     if (Coordinator::instance()->containsView(this))
         Coordinator::instance()->removeView(this);
+    explorationJob.cancel();
+    exportJob.cancel();
+    delete ui->geographicalView;
+    delete ui->timeSeriesWidget;
+    delete ui->histogramWidget;
+    delete ui->scatterPlotWidget;
     delete ui;
 }
 
@@ -122,6 +165,9 @@ std::cout << "Set selection graph" << std::endl;
 }
 
 void ViewWidget::geoWidgetUpdatedData(){
+    ui->timeSeriesWidget->suspendComputation(false);
+    ui->histogramWidget->suspendComputation(false);
+    ui->scatterPlotWidget->suspendComputation(false);
     //
     ui->timeSeriesWidget->setDateTimes(ui->geographicalView->getSelectedStartTime(),
                                        ui->geographicalView->getSelectedEndTime());
@@ -153,72 +199,53 @@ void ViewWidget::on_showAnimationButton_clicked(bool checked)
 
 void ViewWidget::exportTrips()
 {
-    QString filename = QFileDialog::getSaveFileName(this, tr("Export Trips"),
-                                                    QDir::currentPath(),
-                                                    tr("CSV (*.csv)"));
-    if( !filename.isNull() ) {
-        //
-        Global* global = Global::getInstance();
-        int numExtraFields = global->numExtraFields();
+    if (ui->geographicalView->queryBusy() || !ui->geographicalView->hasCurrentSelection() || exportJob.isBusy()) return;
+    const auto filename = QFileDialog::getSaveFileName(this, tr("Export Trips"), QDir::currentPath(), tr("CSV (*.csv)"));
+    if (!filename.isEmpty()) exportToFile(filename);
+}
 
-        QString header = "";
-        QTextStream headerStream(&header);
-
-        headerStream <<  "id_taxi, payment_type, pickup_time, dropoff_time, pickup_long, "
-                << "pickup_lat, dropoff_long, dropoff_lat, distance (in 0.01 miles unit), fare_amount (cents), "
-                << "surcharge (cents), mta_tax (cents), tip_amount (cents), tolls_amount (cents),passengers";
-
-        for(int i = 0 ; i < numExtraFields ; ++i){
-            ExtraField field = global->getExtraField(i);
-            if(field.active){
-              headerStream << "," << field.internalName;
-            }
-
-        }
-
-        //
-        std::ofstream out(filename.toLatin1().constData());
-        out << header.toStdString() << "\n";
-
-        KdTrip::TripSet *trips = ui->geographicalView->getSelectedTrips();
-        KdTrip::TripSet::iterator it = trips->begin();
-
-        for(; it!= trips->end(); ++it) {
-          const KdTrip::Trip *trip = *it;
-
-          //
-          QString extraFieldsStr = "";
-          QTextStream extraFieldStream(&extraFieldsStr);
-          for(int i = 0 ; i < numExtraFields ; ++i){
-              ExtraField field = global->getExtraField(i);
-              if(field.active){
-                u_int32_t value = getExtraFieldValue(trip,i);
-                extraFieldStream << "," << value;
-              }
-
-          }
-
-          //
-            out << trip->id_taxi << ","
-                << (int)trip->payment_type << ","
-                << QDateTime::fromSecsSinceEpoch(trip->pickup_time).toString("MM/dd/yy hh:mm:ss").toStdString() << ","
-                << QDateTime::fromSecsSinceEpoch(trip->dropoff_time).toString("MM/dd/yy hh:mm:ss").toStdString() << ","
-                << trip->pickup_long << ","
-                << trip->pickup_lat << ","
-                << trip->dropoff_long << ","
-                << trip->dropoff_lat << ","
-                << trip->distance << ","
-                << trip->fare_amount << ","
-                << trip->surcharge << ","
-                << trip->mta_tax << ","
-                << trip->tip_amount << ","
-                << trip->tolls_amount << ","
-                << (int)trip->passengers
-                << extraFieldsStr.toStdString() //either empty or starts with comman
-                << std::endl;
-        }
-        out.close();
+bool ViewWidget::exportToFile(const QString &filename)
+{
+    if (filename.isEmpty() || ui->geographicalView->queryBusy() || !ui->geographicalView->hasCurrentSelection() || exportJob.isBusy()) return false;
+    const auto trips = selectedTrips;
+    QString header = "id_taxi, payment_type, pickup_time, dropoff_time, pickup_long, pickup_lat, dropoff_long, dropoff_lat, distance (in 0.01 miles unit), fare_amount (cents), surcharge (cents), mta_tax (cents), tip_amount (cents), tolls_amount (cents),passengers";
+    std::vector<int> fields;
+    auto global = Global::getInstance();
+    for (int i=0; i<global->numExtraFields(); ++i) {
+        auto field = global->getExtraField(i);
+        if (field.active) { header += "," + field.internalName; fields.push_back(i); }
     }
+    exportJob.submit([trips, filename, header, fields](const Cancellation &cancel) {
+        auto file = std::make_shared<QSaveFile>(filename);
+        if (!file->open(QIODevice::WriteOnly)) throw std::runtime_error(file->errorString().toStdString());
+        QTextStream out(file.get());
+        out << header << '\n';
+        size_t n=0;
+        for (auto trip : trips) {
+            if ((n++ & 1023)==0) cancel.check();
+            out << trip->id_taxi << ',' << int(trip->payment_type) << ','
+                << QDateTime::fromSecsSinceEpoch(trip->pickup_time).toString("MM/dd/yy hh:mm:ss") << ','
+                << QDateTime::fromSecsSinceEpoch(trip->dropoff_time).toString("MM/dd/yy hh:mm:ss") << ','
+                << trip->pickup_long << ',' << trip->pickup_lat << ',' << trip->dropoff_long << ',' << trip->dropoff_lat << ','
+                << trip->distance << ',' << trip->fare_amount << ',' << trip->surcharge << ',' << trip->mta_tax << ','
+                << trip->tip_amount << ',' << trip->tolls_amount << ',' << int(trip->passengers);
+            for (int field : fields) out << ',' << getExtraFieldValue(trip, field);
+            out << '\n';
+        }
+        out.flush();
+        if (out.status()!=QTextStream::Ok) throw std::runtime_error("Could not write CSV");
+        cancel.check();
+        // Release QObject affinity for a sequential handoff to the GUI thread.
+        // A canceled outcome can also safely destroy this detached temporary.
+        file->moveToThread(nullptr);
+        return file;
+    }, [this, filename](std::shared_ptr<QSaveFile> file) {
+        // Publish only on the GUI thread after the controller's cancellation check.
+        file->moveToThread(thread());
+        if (!file->commit()) emit backgroundError(file->errorString());
+        else emit exportFinished(filename);
+    });
+    return true;
 }
 
 void ViewWidget::selectionModeChanges(int mode)
@@ -258,14 +285,13 @@ void ViewWidget::on_syncButton_clicked(bool checked)
 
 void ViewWidget::plotAllAttributes()
 {
+  if (ui->geographicalView->queryBusy()) return;
   if (this->ui->tabWidget->currentWidget()==this->ui->timeSeriesWidget) {
     int numBins = this->ui->timeSeriesWidget->getNumberOfBins();
     TemporalSeriesDialog *dialog = new TemporalSeriesDialog(this->ui->geographicalView, numBins);
-    int result = dialog->exec();
-    if (result==QDialog::Accepted) {
-      this->updateTimes(dialog->startTime(), dialog->endTime());
-    }
-    delete dialog;
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    connect(dialog, &QDialog::accepted, this, [this, dialog] { updateTimes(dialog->startTime(),dialog->endTime()); });
+    dialog->open();
   }
   else {
     int numBins = this->ui->histogramWidget->getNumberOfBins();
@@ -291,87 +317,67 @@ void ViewWidget::exploreInTime(const DateTimeList &timeRanges)
       return;
   }
 
-  QProgressDialog progress("Performing exploration...", QString(), 0, timeRanges.count(), this);
-  progress.setMinimumDuration(0);
-
-  TimeExplorationDialog *dialog = new TimeExplorationDialog(this);
-  SelectionGraph selectionGraph, plotGraph;
-  selectionGraph.assign(this->ui->geographicalView->getSelectionGraph());
-  KdTrip::TripSet resultSet, plotSet;
-  std::vector<KdTrip::Trip> plotTrips;
-  KdTrip::TripSet::iterator tripIt;
-  std::map<int,SelectionGraphNode*>::iterator beginNodeIterator;
-  std::map<int,SelectionGraphNode*>::iterator   endNodeIterator;
-  std::map<int,SelectionGraphEdge*>::iterator beginEdgeIterator;
-  std::map<int,SelectionGraphEdge*>::iterator   endEdgeIterator;
-
-  if(timeRanges.size() == 0){
-      qDebug() << "EMPTY TIME RANGES";
-      return;
-  }
-
-  DateTimePair baseRange = timeRanges.at(0);
-  for (int i=1; i<timeRanges.count(); i++) {
-    int len = timeRanges.at(i).first.secsTo(timeRanges.at(i).second);
-    if (baseRange.first.secsTo(baseRange.second)<len)
-      baseRange = timeRanges.at(i);
-  }
-  uint minPickup=UINT_MAX, maxDropoff = 0;
-  for (int i=0; i<timeRanges.count(); i++) {
-    progress.setValue(i);
-    QApplication::processEvents();
-    Global::getInstance()->queryData(&selectionGraph,
-                                     timeRanges.at(i).first,
-                                     timeRanges.at(i).second,
-                                     resultSet);
-
-    selectionGraph.getNodeIterator(beginNodeIterator,endNodeIterator);
-    for(;beginNodeIterator != endNodeIterator ; ++beginNodeIterator) {
-      SelectionGraphNode* node = beginNodeIterator->second;
-      node->setGroup(GroupRepository::getInstance().getItem(i+1));
-    }
-    selectionGraph.getEdgeIterator(beginEdgeIterator,endEdgeIterator);
-    for(; beginEdgeIterator != endEdgeIterator ; ++beginEdgeIterator) {
-      SelectionGraphEdge* edge = beginEdgeIterator->second;
-      edge->setGroup(GroupRepository::getInstance().getItem(i+1));
-    }
-
-    dialog->addGeoWidget(timeRanges.at(i).first,
-                         timeRanges.at(i).second,
-                         &selectionGraph,
-                         resultSet);
-
-    int delta = i==0?baseRange.second.secsTo(timeRanges.at(i).second):baseRange.first.secsTo(timeRanges.at(i).first);
-    for (tripIt=resultSet.begin(); tripIt!=resultSet.end(); tripIt++) {
-      KdTrip::Trip trip = *(*tripIt);
-      trip.pickup_time -= delta;
-      trip.dropoff_time -= delta;
-      trip.pickup_lat = i;
-      trip.pickup_long = i;
-      plotTrips.push_back(trip);
-      if (trip.pickup_time<minPickup) minPickup = trip.pickup_time;
-      if (trip.dropoff_time>maxDropoff) maxDropoff = trip.dropoff_time;
-    }
-    QPainterPath path;
-    path.addRect(i-0.5, i-0.5, 1, 1);
-    Selection *sel = new Selection(path);
-    sel->setType(Selection::START);
-    SelectionGraphNode* node = plotGraph.addNode(sel);
-    node->setGroup(GroupRepository::getInstance().getItem(i+1));
-  }
-
-  //
-  for (size_t i=0; i<plotTrips.size(); i++)
-    plotSet.insert(&plotTrips[i]);
-  dialog->setPlotSelection(baseRange.first, baseRange.second, &plotGraph, &plotSet);
-  // Show every time slice at the same place and zoom as the main map.
-  dialog->setMapView(this->ui->geographicalView->mapView()->center(),
-                     this->ui->geographicalView->mapView()->zoomLevel());
-
-  //
-  progress.setValue(progress.maximum());
-
-  //
-  dialog->exec();
-  delete dialog;
+  if (timeRanges.isEmpty()) return;
+  auto graph = std::make_shared<SelectionGraph>();
+  graph->assign(ui->geographicalView->getSelectionGraph());
+  const auto selection = SelectionSnapshot::capture(graph.get());
+  const auto dataset = Global::getInstance()->dataset();
+  const auto center = ui->geographicalView->mapView()->center();
+  const int zoom = ui->geographicalView->mapView()->zoomLevel();
+  auto base = timeRanges.first();
+  for (const auto &range : timeRanges)
+      if (base.first.secsTo(base.second) < range.first.secsTo(range.second)) base = range;
+  if (explorationProgress) explorationProgress->close();
+  auto progress = new QProgressDialog(tr("Performing exploration…"), tr("Cancel"), 0, 0, this);
+  explorationProgress=progress;
+  progress->setAttribute(Qt::WA_DeleteOnClose);
+  progress->setWindowModality(Qt::NonModal);
+  connect(progress, &QProgressDialog::canceled, this, &ViewWidget::cancelExploration);
+  explorationJob.onBusy = [progress=QPointer<QProgressDialog>(progress)](bool busy) { if (!busy && progress) progress->close(); };
+  progress->show();
+  explorationJob.submit([dataset, selection, timeRanges, base](const Cancellation &cancel) {
+      ExplorationData data;
+      auto storage = std::make_shared<std::vector<KdTrip::Trip>>();
+      for (int i=0; i<timeRanges.size(); ++i) {
+          cancel.check();
+          const auto range = timeRanges.at(i);
+          data.slices.push_back(QueryManager::query(dataset, selection, range.first, range.second, cancel));
+          const auto delta = i==0 ? base.second.secsTo(range.second) : base.first.secsTo(range.first);
+          size_t n=0;
+          for (auto original : data.slices.back()) {
+              if ((n++ & 1023)==0) cancel.check();
+              auto trip = *original;
+              trip.pickup_time -= delta; trip.dropoff_time -= delta;
+              trip.pickup_lat = i; trip.pickup_long = i;
+              storage->push_back(trip);
+          }
+      }
+      data.plot.keepAlive(storage);
+      size_t n=0;
+      for (const auto &trip : *storage) {
+          if ((n++ & 1023)==0) cancel.check();
+          data.plot.insert(&trip);
+      }
+      return data;
+  }, [this, graph, timeRanges, base, center, zoom](ExplorationData data) {
+      auto dialog = new TimeExplorationDialog(this);
+      dialog->setAttribute(Qt::WA_DeleteOnClose);
+      SelectionGraph plotGraph;
+      for (int i=0; i<timeRanges.size(); ++i) {
+          std::map<int,SelectionGraphNode*>::iterator nb, ne;
+          std::map<int,SelectionGraphEdge*>::iterator eb, ee;
+          auto group = GroupRepository::getInstance().getItem(i+1);
+          graph->getNodeIterator(nb,ne);
+          for (;nb!=ne;++nb) nb->second->setGroup(group);
+          graph->getEdgeIterator(eb,ee);
+          for (;eb!=ee;++eb) eb->second->setGroup(group);
+          dialog->addGeoWidget(timeRanges[i].first,timeRanges[i].second,graph.get(),data.slices[i]);
+          QPainterPath path; path.addRect(i-.5,i-.5,1,1);
+          auto sel = new Selection(path); sel->setType(Selection::START);
+          plotGraph.addNode(sel)->setGroup(group);
+      }
+      dialog->setPlotSelection(base.first,base.second,&plotGraph,&data.plot);
+      dialog->setMapView(center,zoom);
+      dialog->show();
+  });
 }

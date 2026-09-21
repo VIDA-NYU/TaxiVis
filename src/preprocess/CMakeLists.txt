@@ -44,3 +44,16 @@ target_link_libraries(testQuery Qt6::Core ${Boost_LIBRARIES})
 # build_kdtrip - builds KD-tree spatial index from binary Trip data
 add_executable(build_kdtrip build_kdtrip.cpp)
 target_link_libraries(build_kdtrip ${Boost_LIBRARIES})
+
+if(BUILD_TESTING)
+    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    add_executable(kdtrip_check ../../tests/kdtrip_check.cpp)
+    target_include_directories(kdtrip_check PRIVATE ../TaxiVis)
+    target_link_libraries(kdtrip_check ${Boost_LIBRARIES})
+    add_test(NAME kdtrip_regression
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../../tests/kdtrip_regression.py
+            $<TARGET_FILE:build_kdtrip> $<TARGET_FILE:kdtrip_check>
+            ${CMAKE_CURRENT_SOURCE_DIR}/../../data/sample_merged_1.kdtrip)
+    set_tests_properties(kdtrip_regression PROPERTIES
+        ENVIRONMENT "UBSAN_OPTIONS=halt_on_error=1")
+endif()

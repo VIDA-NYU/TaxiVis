@@ -7,6 +7,8 @@
 #include "qcustomplot.h"
 #include "KdTrip.hpp"
 #include "SelectionGraph.h"
+#include "AsyncTask.hpp"
+#include "SelectionSnapshot.hpp"
 
 namespace Ui {
 class HistogramWidget;
@@ -38,9 +40,9 @@ public:
     void setSelectedTripsRepository(KdTrip::TripSet *);
     void setSelectionGraph(SelectionGraph*);
     void setPlotAttribute(HistogramWidget::PlotAttribute pAttrib);
-    void setNumberOfBinsOfUi(int numBins);
     int  getNumberOfBins();
     void joinSelectedTrips(KdTrip::TripSet *trips);
+    std::function<bool(const KdTrip::Trip*)> filterSnapshot() const;
 
     QString getAttributeDescription();
 
@@ -49,11 +51,12 @@ public:
     PlotAttribute plotAttribute() {return _plotAttribute;}
 
 private:
+    bool suspended=false;
     Ui::HistogramWidget *ui;
 
     //
-    KdTrip::TripSet *selectedTrips;
-    SelectionGraph  *selectionGraph;
+    KdTrip::TripSet *selectedTrips=nullptr;
+    SelectionGraph  *selectionGraph=nullptr;
 
     //
     Coordinator    *coordinator;
@@ -70,8 +73,16 @@ private:
     std::map<Group,QCPBars*> groupPlots;
 
     //
-    void computeDataBounds();
-    void computeHistograms();
+    struct HistogramData {
+        std::map<Group, std::map<PlotAttribute, std::vector<HistBin>>> groups;
+        std::map<PlotAttribute, std::pair<float,float>> bounds;
+    };
+    LatestTask<HistogramData> computeJob;
+public:
+    void suspendComputation(bool value) { suspended=value; if (value) computeJob.cancel(); }
+    bool computationBusy() const { return computeJob.isBusy(); }
+    void cancelComputation() { computeJob.cancel(); }
+private:
     bool tripSatisfiesEdge(const KdTrip::Trip *trip, SelectionGraphEdge* edge);
     bool tripSatisfiesConstraints(const KdTrip::Trip *trip,
                                   std::vector<SelectionGraphNode*> groupNodeConstraints,
@@ -79,7 +90,7 @@ private:
     void updateControlValues();
 
     //
-    float getTripValue(const KdTrip::Trip *,PlotAttribute);
+    static float getTripValue(const KdTrip::Trip *,PlotAttribute);
 
 public:
     void updatePlots();

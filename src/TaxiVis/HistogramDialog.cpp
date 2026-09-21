@@ -1,6 +1,8 @@
 #include "HistogramDialog.hpp"
 #include "ui_HistogramDialog.h"
 #include "global.h"
+#include <QDialogButtonBox>
+#include <QPushButton>
 
 HistogramDialog::HistogramDialog(GeographicalViewWidget *geo, int numBins)
     : QDialog(geo),
@@ -11,9 +13,18 @@ HistogramDialog::HistogramDialog(GeographicalViewWidget *geo, int numBins)
   this->connect(this, SIGNAL(finished(int)), this, SLOT(onFinished(int)));
   
   this->trips = *this->geoWidget->getSelectedTrips();
+  revision=geoWidget->dataRevision();
+  filterJob.onBusy=[this](bool busy) {
+      for (auto box : findChildren<QDialogButtonBox*>())
+          for (auto button : box->buttons()) if (box->buttonRole(button)==QDialogButtonBox::AcceptRole) button->setEnabled(!busy);
+  };
+  selectionSnapshot.assign(geoWidget->getSelectionGraph());
+  connect(geoWidget, &GeographicalViewWidget::queryBusyChanged, this, [this](bool busy) {
+      if (busy) { stale=true; filterJob.cancel(); setEnabled(false); }
+  });
   QDateTime startTime = this->geoWidget->getSelectedStartTime();
   QDateTime endTime = this->geoWidget->getSelectedEndTime();
-  SelectionGraph *selectionGraph = this->geoWidget->getSelectionGraph();
+  SelectionGraph *selectionGraph = &selectionSnapshot;
   QGridLayout *layout = this->ui->gridLayout;
 
   //add extra widgets to deal with the extra fields
@@ -62,7 +73,7 @@ HistogramDialog::HistogramDialog(GeographicalViewWidget *geo, int numBins)
     }
   }
   for (int i=0; i<this->plots.count(); i++) {
-    this->connect(this->plots[i]->rangeDragAxis(Qt::Horizontal),
+    this->connect(this->plots[i]->axisRect()->rangeDragAxis(Qt::Horizontal),
                   SIGNAL(rangeChanged(const QCPRange&)),
                   this, SLOT(xAxisRangeChanged(const QCPRange&)));
     this->connect(this->plots[i],
@@ -73,21 +84,23 @@ HistogramDialog::HistogramDialog(GeographicalViewWidget *geo, int numBins)
 
 HistogramDialog::~HistogramDialog()
 {
+  filterJob.cancel();
+  for (auto widget : findChildren<HistogramWidget*>()) delete widget;
   delete this->ui;
 }
 
 void HistogramDialog::xAxisRangeChanged(const QCPRange &newRange)
 {
   for (int i=0; i<this->plots.count(); i++)
-    this->disconnect(this->plots[i]->rangeDragAxis(Qt::Horizontal),
+    this->disconnect(this->plots[i]->axisRect()->rangeDragAxis(Qt::Horizontal),
                      SIGNAL(rangeChanged(const QCPRange&)),
                      this, SLOT(xAxisRangeChanged(const QCPRange&)));  
   for (int i=0; i<this->plots.count(); i++) {
-    this->plots[i]->rangeDragAxis(Qt::Horizontal)->setRange(newRange);
+    this->plots[i]->axisRect()->rangeDragAxis(Qt::Horizontal)->setRange(newRange);
     this->plots[i]->replot();
   }
   for (int i=0; i<this->plots.count(); i++) {
-    this->connect(this->plots[i]->rangeDragAxis(Qt::Horizontal),
+    this->connect(this->plots[i]->axisRect()->rangeDragAxis(Qt::Horizontal),
                   SIGNAL(rangeChanged(const QCPRange&)),
                   this, SLOT(xAxisRangeChanged(const QCPRange&)));
   }
@@ -95,26 +108,33 @@ void HistogramDialog::xAxisRangeChanged(const QCPRange &newRange)
 
 void HistogramDialog::updateSelection(QList<IntervalSelection>)
 {
-  int selectionCount = 0;
-  for (int i=0; i<this->plots.count(); i++) {
-    selectionCount += this->plots.at(i)->getSelections().count();
+  if (stale || geoWidget->queryBusy() || geoWidget->dataRevision()!=revision) return;
+  std::vector<std::function<bool(const KdTrip::Trip*)>> filters;
+  QStringList descriptions;
+  for (auto widget : findChildren<HistogramWidget*>()) {
+      filters.push_back(widget->filterSnapshot());
+      auto description=widget->getAttributeDescription();
+      if (!description.isEmpty()) descriptions << description;
   }
-  KdTrip::TripSet out = this->trips;
-  QGridLayout *layout = this->ui->gridLayout;
-  QStringList descList;
-  for (int i=0; i<layout->count(); i++) {
-    HistogramWidget *widget = dynamic_cast<HistogramWidget*>(layout->itemAt(i)->widget());
-    if (widget) {
-      widget->joinSelectedTrips(&out);
-      QString desc = widget->getAttributeDescription();
-      if (!desc.isEmpty())
-        descList << desc;
-    }
-  }
-  this->geoWidget->getSelectedTrips()->swap(out);
-  this->geoWidget->setQueryDescription(descList);
-  this->geoWidget->emitDatasetUpdated();
-  this->geoWidget->repaintContents();
+  const auto baseline=trips;
+  filterJob.submit([baseline,filters](const Cancellation &cancel) {
+      KdTrip::TripSet result; result.inheritOwners(baseline);
+      size_t n=0;
+      for (auto trip : baseline) {
+          if ((n++ & 1023)==0) cancel.check();
+          bool accepted=true;
+          for (const auto &filter : filters) if (!filter(trip)) { accepted=false; break; }
+          if (accepted) result.insert(trip);
+      }
+      return result;
+  }, [this, descriptions](KdTrip::TripSet result) {
+      if (stale || geoWidget->queryBusy() || geoWidget->dataRevision()!=revision) return;
+      geoWidget->getSelectedTrips()->swap(result);
+      geoWidget->setQueryDescription(descriptions);
+      geoWidget->emitDatasetUpdated();
+      revision=geoWidget->dataRevision();
+      geoWidget->repaintContents();
+  });
 }
 
 KdTrip::TripSet * HistogramDialog::selectedTrips()
@@ -124,7 +144,8 @@ KdTrip::TripSet * HistogramDialog::selectedTrips()
 
 void HistogramDialog::onFinished(int result)
 {
-  if (result==QDialog::Rejected) {
+  filterJob.cancel();
+  if (result==QDialog::Rejected && !stale && !geoWidget->queryBusy() && geoWidget->dataRevision()==revision) {
     this->geoWidget->getSelectedTrips()->swap(this->trips);
     this->geoWidget->setQueryDescription(QStringList());
     this->geoWidget->emitDatasetUpdated();

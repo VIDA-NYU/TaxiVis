@@ -3,6 +3,7 @@
 
 #include "QMapWidget.hpp"
 #include "KdTrip.hpp"
+#include "AsyncTask.hpp"
 #include "RenderingLayer.hpp"
 #include "SelectionGraph.h"
 #include "timewidget.h"
@@ -29,6 +30,9 @@ public:
   
 private:
 
+    LatestTask<KdTrip::TripSet> queryJob;
+    quint64 dataRevision_ = 0;
+    bool selectionCurrent_ = true;
     State                      currentState;
     //
     QPainterPath               selectionPath;
@@ -99,6 +103,10 @@ public:
     void setSelectionType(Selection::TYPE type);
     void setSelectionMode(SelectionMode mode);
     void updateData();
+    bool hasCurrentSelection() const { return selectionCurrent_; }
+    bool queryBusy() const { return queryJob.isBusy(); }
+    quint64 dataRevision() const { return dataRevision_; }
+    void cancelQuery() { queryJob.cancel(); }
     bool mergeSelections();
     bool unmergeSelections();
 
@@ -130,6 +138,8 @@ public:
     void setQueryDescription(const QStringList &list);
 
 signals:
+    void queryBusyChanged(bool busy);
+    void queryFailed(QString error);
     void mapSelectionChanged();
     void datasetUpdated();
     void stepBack();

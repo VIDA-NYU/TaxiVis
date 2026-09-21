@@ -8,20 +8,21 @@
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <boost/timer/timer.hpp>
 #include "../TaxiVis/KdTrip.hpp"
-#include "radix.h"
+#include <algorithm>
+#include <cstring>
+#include <fstream>
+#include <limits>
+#include <stdexcept>
+#include <vector>
 
 #define xDEBUG
 
 int numNodesPerTrip = 1+((sizeof(KdTrip::Trip) + 8)/sizeof(KdTrip::KdNode));
 
 inline uint32_t float2uint(float f) {
-  register uint32_t t(*((uint32_t*)&f));
+  uint32_t t;
+  std::memcpy(&t, &f, sizeof(t));
   return t ^ ((-(t >> 31)) | 0x80000000);
-}
-
-inline float uint2float(uint32_t f) {
-  register uint32_t u = f ^ (((f >> 31) - 1) | 0x80000000);
-  return *((float*)&u);
 }
 
 #pragma pack(push, 1)
@@ -54,7 +55,7 @@ inline uint32_t getUKey(const KdTrip::Trip &trip, int keyIndex)
   return 0;
 }
 
-void buildKdTree(KdNode *nodes, uint32_t *tmp, KdTrip::Trip *trips, uint64_t n, int depth, uint64_t thisNode, uint64_t &freeNode) {
+void buildKdTree(KdNode *nodes, KdTrip::Trip *trips, uint64_t n, int depth, uint64_t thisNode, uint64_t &freeNode) {
   KdNode *node = nodes + thisNode;
   if (n<2) {
     static uint64_t cnt = 0;
@@ -66,91 +67,47 @@ void buildKdTree(KdNode *nodes, uint32_t *tmp, KdTrip::Trip *trips, uint64_t n, 
     return;
   }
   int keyIndex = depth%7;
+  // Split by rank, including for identical values. Both subtrees may contain
+  // the median, which the inclusive query traversal explicitly supports.
   size_t medianIndex = n/2-1;
+  std::nth_element(trips, trips + medianIndex, trips + n,
+                   [keyIndex](const KdTrip::Trip &a, const KdTrip::Trip &b) {
+                     return getUKey(a, keyIndex) < getUKey(b, keyIndex);
+                   });
   uint32_t median = getUKey(trips[medianIndex], keyIndex);
-  //if (depth!=0) { //if inpute file is sorted by pickup time, don't need to resort all the time.
-  if (true) {
-    for (size_t i=0; i<n; i++)
-      tmp[i] = getUKey(trips[i], keyIndex);
-    sortArray(tmp, n);
-    median = tmp[n/2-1];
-    int64_t l = 0;
-    int64_t r = n-1;
-    while (l<r) {
-      while (l<n && getUKey(trips[l], keyIndex)<=median) l++;
-      while (r>=0 && getUKey(trips[r], keyIndex)>median) r--;
-      if (l<r)
-        SWAP(KdTrip::Trip, trips[l], trips[r]);
-    }
-    medianIndex = r;
-    if (medianIndex==n-1)
-      medianIndex = n-2;
-  }
   node->median_value = median;
   node->child_node = freeNode;
   freeNode += 2 + ((uint64_t)(medianIndex+1<2))*numNodesPerTrip + ((uint64_t)((n-medianIndex-1<2)&&(n-medianIndex-1>0)))*numNodesPerTrip;
-  buildKdTree(nodes, tmp, trips, medianIndex+1, depth+1, node->child_node, freeNode);
+  buildKdTree(nodes, trips, medianIndex+1, depth+1, node->child_node, freeNode);
   if (medianIndex<n-1)
-    buildKdTree(nodes, tmp, trips + medianIndex+1, n-medianIndex-1, depth+1,
+    buildKdTree(nodes, trips + medianIndex+1, n-medianIndex-1, depth+1,
                 node->child_node+1+((uint64_t)(medianIndex+1<2))*numNodesPerTrip, freeNode);
   else
     nodes[node->child_node+1].child_node = -1;
 }
 
-void createKdTree(int argc, char **argv) {
+void createKdTree(const char *input, const char *output) {
   fprintf(stderr, "Creating KD tree\n");
-  boost::iostreams::mapped_file mfile(std::string(argv[1]),
-                                      boost::iostreams::mapped_file::priv);
-  uint64_t n = mfile.size()/sizeof(KdTrip::Trip);
-  KdTrip::Trip *trips = (KdTrip::Trip*)mfile.const_data();
-#ifdef DEBUG
-  for(uint i = 0 ; i < n ; i++){
-      KdTrip::Trip trip = trips[i];
-      printf("Trip %d\n",i);
-      printf("    Taxi ID: %d\n",trip.id_taxi);
-      printf("    pickup_time: %d\n",trip.pickup_time);
-      printf("    dropoff_time: %d\n",trip.dropoff_time);
-      printf("    pickup lat: %f\n",trip.pickup_lat);
-      printf("    pickup lng: %f\n",trip.pickup_long);
-      printf("    dropoff lat: %f\n",trip.dropoff_lat);
-      printf("    dropoff lng: %f\n",trip.dropoff_long);
-      printf("    distance: %d\n",trip.distance);
-      printf("    fare: %d\n",trip.fare_amount);
-      printf("    passengers: %d\n",trip.passengers);
-      printf("    payment type: %d\n",trip.payment_type);
-      printf("    field1: %d\n",trip.field1);
-      printf("    field2: %d\n",trip.field2);
-      printf("    field3: %d\n",trip.field3);
-      printf("    field4: %d\n",trip.field4);
+  if (boost::filesystem::exists(output) && boost::filesystem::equivalent(input, output))
+    throw std::runtime_error("Input and output must be different files");
+  boost::iostreams::mapped_file mfile(std::string(input), boost::iostreams::mapped_file::priv);
+  if (mfile.size() == 0 || mfile.size() % sizeof(KdTrip::Trip) != 0)
+    throw std::runtime_error("Input must contain complete 56-byte Trip records");
+  size_t n = mfile.size()/sizeof(KdTrip::Trip);
+  KdTrip::Trip *trips = reinterpret_cast<KdTrip::Trip*>(mfile.data());
+  const size_t slotsPerTrip = KdTrip::kLeafNodeSpan + 1;
+  if (n > std::numeric_limits<size_t>::max()/slotsPerTrip/sizeof(KdNode))
+    throw std::runtime_error("Input is too large to index");
+  // A full binary tree has n leaves and n-1 internal nodes.
+  std::vector<KdNode> nodes(slotsPerTrip*n-1);
+  uint64_t freeNode = n == 1 ? KdTrip::kLeafNodeSpan : 1;
+  buildKdTree(nodes.data(), trips, n, 0, 0, freeNode);
 
-      struct tm * timeinfo;
-      time_t pickTime = trip.pickup_time;
-      timeinfo = localtime (&pickTime);
-      printf ("   pickupTime: %s", asctime(timeinfo));
-      time_t dropTime = trip.dropoff_time;
-      timeinfo = localtime (&dropTime);
-      printf ("   dropoffTime: %s", asctime(timeinfo));
-  }
-#endif
-
-  KdNode *nodes = (KdNode*)malloc(sizeof(KdNode)*((numNodesPerTrip+1)*n+n*3/2));
-  uint32_t *tmp = (uint32_t*)malloc(sizeof(uint32_t)*n);
-  
-  assert(nodes != NULL);
-  assert(tmp!= NULL);
-
-  uint64_t freeNode = 1;
-  buildKdTree(nodes, tmp, trips, n, 0, 0, freeNode);
-
-  // Writing new indices file
-  fprintf(stderr, "\rWriting %llu nodes to %s\n", freeNode, argv[2]);
-  FILE *fo = fopen(argv[2], "wb");
-  fwrite(nodes, sizeof(KdNode), freeNode, fo);
-  fclose(fo);  
-  mfile.close();
-  free(nodes);
-  free(tmp);
-
+  fprintf(stderr, "Writing %llu nodes to %s\n", static_cast<unsigned long long>(freeNode), output);
+  std::ofstream stream(output, std::ios::binary | std::ios::trunc);
+  stream.exceptions(std::ios::failbit | std::ios::badbit);
+  stream.write(reinterpret_cast<const char*>(nodes.data()), freeNode * sizeof(KdNode));
+  stream.close();
 }
 
 int main(int argc, char **argv) {
@@ -158,6 +115,11 @@ int main(int argc, char **argv) {
     fprintf(stderr, "Usage: %s  <IN_TAXI_TRIP_RECORDS_FILE>  <<OUT_KDTRIP_FILE>\n", argv[0]);
     return -1;
   }  
-  createKdTree(argc, argv);
+  try {
+    createKdTree(argv[1], argv[2]);
+  } catch (const std::exception &error) {
+    fprintf(stderr, "Unable to build index: %s\n", error.what());
+    return 1;
+  }
   return 0;
 }

@@ -30,6 +30,7 @@ GeographicalViewWidget::GeographicalViewWidget(QWidget *parent) :
     currentState(GeographicalViewWidget::IDLE),
     basePosition(-1,-1),
     selectedTrips(NULL),
+    selectionGraph(nullptr),
     renderTrips(true),
     selectionType(Selection::START),
     selectionMode(SINGLE),
@@ -37,6 +38,8 @@ GeographicalViewWidget::GeographicalViewWidget(QWidget *parent) :
     selectionTimeColor(Qt::blue),
     queryDescriptionVisible(false)
 {
+    queryJob.onBusy = [this](bool busy) { emit queryBusyChanged(busy); repaintContents(); };
+    queryJob.onError = [this](const QString &error) { emit queryFailed(error); };
     this->setCoordinator(Coordinator::instance());
   
     this->selectionTimes = DateTimeList();
@@ -75,6 +78,8 @@ GeographicalViewWidget::GeographicalViewWidget(QWidget *parent) :
 
 GeographicalViewWidget::~GeographicalViewWidget()
 {
+    queryJob.cancel();
+    delete this->layerHeatMap;
     delete this->layerLocation;
     delete this->layerZipCode;
     delete this->layerNeighborhood;
@@ -275,6 +280,14 @@ void GeographicalViewWidget::initGL(){
 }
 
 void GeographicalViewWidget::paintOverlay(QPainter *painter){
+    if (queryBusy()) {
+        painter->save();
+        painter->setPen(Qt::black);
+        painter->setBrush(QColor(255,255,255,220));
+        painter->drawRoundedRect(QRectF(10,10,180,30),4,4);
+        painter->drawText(QRectF(18,10,164,30),Qt::AlignVCenter,tr("Updating selection…"));
+        painter->restore();
+    }
     //render selections, this should be rendered on top of the opengl stuff
     renderSelections(painter);
     //
@@ -879,20 +892,41 @@ void GeographicalViewWidget::pickSelection(SelectionGraphNode *& sel, QPointF p)
 
 void GeographicalViewWidget::querySelectedData()
 {
-  this->selectedTrips->clear();
-  KdTrip::TripSet result;
-  for (int i=0; i<this->selectionTimes.count(); i++) {
-    QDateTime start = this->selectionTimes.at(i).first;
-    QDateTime end = this->selectionTimes.at(i).second;
-    Global::getInstance()->queryData(this->selectionGraph, start, end, result);
-    this->selectedTrips->insert(result.begin(), result.end());
-  }
-  this->setQueryDescription(QStringList());
-  this->emitDatasetUpdated();
+  if (!selectedTrips || !selectionGraph) return;
+  selectionCurrent_=false;
+  layerHeatMap->cancelComputation();
+  layerLocation->cancelComputation();
+  layerNeighborhood->cancelComputation();
+  layerZipCode->cancelComputation();
+  layerAnimation->cancelComputation();
+  auto selection = SelectionSnapshot::capture(selectionGraph);
+  auto times = selectionTimes;
+  auto data = Global::getInstance()->dataset();
+  queryJob.submit([selection, times, data](const Cancellation &cancel) {
+      KdTrip::TripSet result;
+      for (const auto &range : times) {
+          cancel.check();
+          auto slice=QueryManager::query(data, selection, range.first, range.second, cancel);
+          if (result.empty()) result=std::move(slice);
+          else {
+              result.inheritOwners(slice);
+              size_t n=0;
+              for (auto trip : slice) { if ((n++ & 1023)==0) cancel.check(); result.insert(trip); }
+          }
+      }
+      return result;
+  }, [this](KdTrip::TripSet result) {
+      selectedTrips->swap(result);
+      setQueryDescription(QStringList());
+      emitDatasetUpdated();
+      repaintContents();
+  });
 }
 
 void GeographicalViewWidget::emitDatasetUpdated()
 {
+  selectionCurrent_=true;
+  ++dataRevision_;
   emit datasetUpdated();
 }
 

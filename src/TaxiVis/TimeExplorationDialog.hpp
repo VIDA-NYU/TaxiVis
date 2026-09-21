@@ -21,6 +21,8 @@ public:
 
 private:
   Ui::TimeExplorationDialog *ui;
+  KdTrip::TripSet plotTrips;
+  SelectionGraph plotGraph;
   
   QList<GeographicalViewWidget*> geoWidgets;
         

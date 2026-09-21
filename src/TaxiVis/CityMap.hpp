@@ -373,7 +373,7 @@ public:
     return true;
   }
   
-  inline bool computeShortestPath(int src, int dst, Path &path)
+  inline bool computeShortestPath(int src, int dst, Path &path) const
   {
     IntVec prev(this->numIntersections());
     FloatVec dist(this->numIntersections());
@@ -384,6 +384,7 @@ public:
         path.push_back(dst);
         dst = prev[dst];
       }
+      path.push_back(dst);
       return true;
     }
     return false;

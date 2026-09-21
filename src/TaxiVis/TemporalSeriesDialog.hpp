@@ -3,6 +3,8 @@
 
 #include <QDialog>
 #include "extendedplotwidget.h"
+#include "KdTrip.hpp"
+#include "SelectionGraph.h"
 
 namespace Ui {
   class TemporalSeriesDialog;
@@ -22,6 +24,8 @@ public:
 
 private:
   Ui::TemporalSeriesDialog *ui;
+  KdTrip::TripSet tripSnapshot;
+  SelectionGraph graphSnapshot;
 
   GeographicalViewWidget    *geoWidget;
   QList<ExtendedPlotWidget*> plots;

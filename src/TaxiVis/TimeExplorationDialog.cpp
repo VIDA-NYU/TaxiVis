@@ -17,9 +17,16 @@ TimeExplorationDialog::TimeExplorationDialog(QWidget *parent)
 TimeExplorationDialog::~TimeExplorationDialog()
 {
   for (int i=0; i<this->geoWidgets.count(); i++) {
-    delete this->geoWidgets.at(i)->getSelectedTrips();
-    delete this->geoWidgets.at(i)->getSelectionGraph();
+    auto widget = geoWidgets.at(i);
+    auto trips = widget->getSelectedTrips();
+    auto graph = widget->getSelectionGraph();
+    delete widget;
+    delete trips;
+    delete graph;
   }
+  delete ui->timeSeriesWidget;
+  delete ui->histogramWidget;
+  delete ui->scatterPlotWidget;
   delete this->ui;
   delete this->coordinator;
 }
@@ -52,8 +59,11 @@ void TimeExplorationDialog::addGeoWidget(QDateTime startTime, QDateTime endTime,
 }
 
 void TimeExplorationDialog::setPlotSelection(QDateTime startTime, QDateTime endTime, SelectionGraph *graph, KdTrip::TripSet *inTrips)
-{ 
-  //
+{
+  plotTrips = *inTrips;
+  plotGraph.assign(graph);
+  inTrips = &plotTrips;
+  graph = &plotGraph;
   this->ui->timeSeriesWidget->setSelectedTripsRepository(inTrips);
   this->ui->timeSeriesWidget->setSelectionGraph(graph);
   this->ui->timeSeriesWidget->setDateTimes(startTime, endTime);

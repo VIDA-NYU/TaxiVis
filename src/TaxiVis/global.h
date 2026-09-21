@@ -35,6 +35,7 @@ private:
 public:
     static Global* getInstance();
   
+    std::shared_ptr<const KdTrip> dataset() const { return queryManger.dataset(); }
     CityMap*         getMap();
     ColorScale*      getColorScale();
     NeighborhoodSet* getNeighSet();
