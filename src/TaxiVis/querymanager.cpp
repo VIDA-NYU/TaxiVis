@@ -47,8 +47,8 @@ QueryManager::QueryManager(){
     qDebug() << "  Number of trips:" << tripCount;
 
     if (tripCount > 0) {
-        QDateTime minDate = QDateTime::fromTime_t(minTime);
-        QDateTime maxDate = QDateTime::fromTime_t(maxTime);
+        QDateTime minDate = QDateTime::fromSecsSinceEpoch(minTime);
+        QDateTime maxDate = QDateTime::fromSecsSinceEpoch(maxTime);
         qDebug() << "  Time range:" << minDate.toString("yyyy-MM-dd HH:mm")
                  << "to" << maxDate.toString("yyyy-MM-dd HH:mm");
     }

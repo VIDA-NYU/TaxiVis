@@ -61,7 +61,7 @@ ViewWidget::ViewWidget(QWidget *parent) :
     buttonGroup->addButton(ui->linkModeButton, 3);
     buttonGroup->addButton(ui->mergeButton, 4);
     buttonGroup->addButton(ui->unmergeButton, 5);
-    connect(buttonGroup, SIGNAL(buttonClicked(int)), this, SLOT(selectionModeChanges(int)));
+    connect(buttonGroup, SIGNAL(idClicked(int)), this, SLOT(selectionModeChanges(int)));
 
     //
     connect(ui->timeSelectionWidget,SIGNAL(timeUpdated(QDateTime,QDateTime)),this,SLOT(updateTimes(QDateTime,QDateTime)));
@@ -201,8 +201,8 @@ void ViewWidget::exportTrips()
           //
             out << trip->id_taxi << ","
                 << (int)trip->payment_type << ","
-                << QDateTime::fromTime_t(trip->pickup_time).toString("MM/dd/yy hh:mm:ss").toStdString() << ","
-                << QDateTime::fromTime_t(trip->dropoff_time).toString("MM/dd/yy hh:mm:ss").toStdString() << ","
+                << QDateTime::fromSecsSinceEpoch(trip->pickup_time).toString("MM/dd/yy hh:mm:ss").toStdString() << ","
+                << QDateTime::fromSecsSinceEpoch(trip->dropoff_time).toString("MM/dd/yy hh:mm:ss").toStdString() << ","
                 << trip->pickup_long << ","
                 << trip->pickup_lat << ","
                 << trip->dropoff_long << ","

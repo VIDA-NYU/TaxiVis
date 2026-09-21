@@ -1,0 +1,1 @@
+/usr/bin/c++  -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/unif96_to_bin.dir/unif96_to_bin.cpp.o -o unif96_to_bin  /opt/homebrew/lib/libboost_iostreams.dylib /opt/homebrew/lib/libboost_filesystem.dylib /opt/homebrew/lib/libboost_timer.dylib /opt/homebrew/lib/libboost_random.dylib /opt/homebrew/lib/libboost_atomic.dylib

@@ -2,6 +2,7 @@
 #define COLORBAR_H
 
 #include <QLinearGradient>
+#include <QObject>
 
 class ColorScale;
 class QMouseEvent;

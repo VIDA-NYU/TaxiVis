@@ -123,7 +123,7 @@ uint GeographicalViewWidget::getSelectionDuration()
 {
   uint duration = 0;
   for (int i=0; i<this->selectionTimes.count(); i++)
-    duration += selectionTimes.at(i).second.toTime_t()-selectionTimes.at(i).first.toTime_t();
+    duration += selectionTimes.at(i).second.toSecsSinceEpoch()-selectionTimes.at(i).first.toSecsSinceEpoch();
   return duration;
 }
 
@@ -333,7 +333,7 @@ void GeographicalViewWidget::renderQueryDescription(QPainter *painter)
   int width = 0;
 
   for (int i=0; i<desc.count(); i++)
-    width = std::max(width, metrics.width(desc.at(i)));
+    width = std::max(width, metrics.horizontalAdvance(desc.at(i)));
                      
   QRectF bounds(5, topY-5, width+11, height+11);
   painter->setPen(Qt::black);
@@ -826,8 +826,8 @@ Group GeographicalViewWidget::getAvailableGroup(){
 
 QPainterPath GeographicalViewWidget::convertToScreen(QPainterPath &path){
     QPolygonF pol = path.toFillPolygon();
-    QPointF* end   = pol.end();
-    QPointF* it = pol.begin();
+    QPolygonF::iterator end = pol.end();
+    QPolygonF::iterator it  = pol.begin();
 
 
     //
@@ -844,8 +844,8 @@ QPainterPath GeographicalViewWidget::convertToScreen(QPainterPath &path){
 }
 
 QPolygonF GeographicalViewWidget::convertToScreen(QPolygonF &pol){
-    QPointF* end   = pol.end();
-    QPointF* it = pol.begin();
+    QPolygonF::iterator end = pol.end();
+    QPolygonF::iterator it  = pol.begin();
 
 
     //
@@ -1111,7 +1111,7 @@ void GeographicalViewWidget::updateEditingSelection()
 
 void GeographicalViewWidget::wheelEvent(QWheelEvent *event){
 
-    if(event->orientation() == Qt::Vertical)
+    if(event->angleDelta().y() != 0)
         QMapWidget::wheelEvent(event);
 
     this->notifyCoordinatorViewChanged();

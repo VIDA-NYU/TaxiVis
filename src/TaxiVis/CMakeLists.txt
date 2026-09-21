@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.16)
 if(POLICY_LEVEL)
     cmake_policy(VERSION 3.5)
 endif()
@@ -120,29 +120,30 @@ if(NOT GLEW_LIBRARY)
     message(FATAL_ERROR "GLEW library not found")
 endif()
 
-# Find Qt5 and related files
+# Find Qt6 and related files
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets OpenGL Network PrintSupport)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets OpenGL OpenGLWidgets Network PrintSupport)
 add_definitions(-DGL_SILENCE_DEPRECATION)
 
-# Generate Qt files (Qt5 handles most automatically with AUTOMOC/AUTOUIC/AUTORCC)
-qt5_wrap_ui(UI_FILES ${FORMS})
+# Generate Qt files (AUTOMOC/AUTOUIC/AUTORCC handle moc, ui and qrc)
+qt_wrap_ui(UI_FILES ${FORMS})
 source_group("Generated" FILES ${UI_FILES})
 
 # Set up paths and start building
 include_directories(${Boost_INCLUDE_DIR} ${OPENGL_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 add_executable(${PROJECT_NAME} ${SOURCES} ${UI_FILES} ${RESOURCES})
 target_link_libraries(${PROJECT_NAME}
-    Qt5::Core
-    Qt5::Gui
-    Qt5::Widgets
-    Qt5::OpenGL
-    Qt5::Network
-    Qt5::PrintSupport
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Widgets
+    Qt6::OpenGL
+    Qt6::OpenGLWidgets
+    Qt6::Network
+    Qt6::PrintSupport
     ${Boost_LIBRARIES}
     ${OPENGL_LIBRARIES}
     ${GLEW_LIBRARY})

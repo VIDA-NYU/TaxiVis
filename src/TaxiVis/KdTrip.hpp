@@ -271,7 +271,7 @@ private:
     }
 
     uint32_t float2uint(float f) {
-        register uint32_t t(*((uint32_t*)&f));
+        uint32_t t(*((uint32_t*)&f));
         return t ^ ((-(t >> 31)) | 0x80000000);
     }
 };

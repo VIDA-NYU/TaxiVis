@@ -181,7 +181,7 @@
  <connections>
   <connection>
    <sender>comboBox</sender>
-   <signal>currentIndexChanged(QString)</signal>
+   <signal>currentTextChanged(QString)</signal>
    <receiver>ScatterPlotWidget</receiver>
    <slot>setAttribute1(QString)</slot>
    <hints>
@@ -197,7 +197,7 @@
   </connection>
   <connection>
    <sender>comboBox_2</sender>
-   <signal>currentIndexChanged(QString)</signal>
+   <signal>currentTextChanged(QString)</signal>
    <receiver>ScatterPlotWidget</receiver>
    <slot>setAttribute2(QString)</slot>
    <hints>

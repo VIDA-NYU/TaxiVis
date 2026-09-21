@@ -80,7 +80,7 @@ TemporalSeriesPlotWidget::TemporalSeriesPlotWidget(QWidget *parent) :
     connect(ui->numBinsSpin,SIGNAL(editingFinished()),this,SLOT(updateNumBins()));
 
     //
-    connect(ui->attributeComboBox,SIGNAL(currentIndexChanged(QString)),this,SLOT(updatePlotAttrib(QString)));
+    connect(ui->attributeComboBox,SIGNAL(currentTextChanged(QString)),this,SLOT(updatePlotAttrib(QString)));
 
     //
     connect(ui->customPlot,SIGNAL(timeIntervalChanged(QDateTime,QDateTime)),this,SLOT(selectionChanged(QDateTime,QDateTime)));

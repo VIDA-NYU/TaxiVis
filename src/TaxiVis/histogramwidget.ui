@@ -132,7 +132,7 @@
  <connections>
   <connection>
    <sender>attributeComboBox</sender>
-   <signal>currentIndexChanged(QString)</signal>
+   <signal>currentTextChanged(QString)</signal>
    <receiver>HistogramWidget</receiver>
    <slot>changeHistAttribute(QString)</slot>
    <hints>

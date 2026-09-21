@@ -1,0 +1,16 @@
+/Users/csilva/src/TaxiVis/build-qt6/CMakeFiles/edit_cache.dir
+/Users/csilva/src/TaxiVis/build-qt6/CMakeFiles/rebuild_cache.dir
+/Users/csilva/src/TaxiVis/build-qt6/src/preprocess/CMakeFiles/unif96_to_bin.dir
+/Users/csilva/src/TaxiVis/build-qt6/src/preprocess/CMakeFiles/sampling.dir
+/Users/csilva/src/TaxiVis/build-qt6/src/preprocess/CMakeFiles/csv2Binary.dir
+/Users/csilva/src/TaxiVis/build-qt6/src/preprocess/CMakeFiles/newFormatCsv2Binary.dir
+/Users/csilva/src/TaxiVis/build-qt6/src/preprocess/CMakeFiles/multiCsv2Binary.dir
+/Users/csilva/src/TaxiVis/build-qt6/src/preprocess/CMakeFiles/testQuery.dir
+/Users/csilva/src/TaxiVis/build-qt6/src/preprocess/CMakeFiles/build_kdtrip.dir
+/Users/csilva/src/TaxiVis/build-qt6/src/preprocess/CMakeFiles/edit_cache.dir
+/Users/csilva/src/TaxiVis/build-qt6/src/preprocess/CMakeFiles/rebuild_cache.dir
+/Users/csilva/src/TaxiVis/build-qt6/src/TaxiVis/CMakeFiles/TaxiVis.dir
+/Users/csilva/src/TaxiVis/build-qt6/src/TaxiVis/CMakeFiles/edit_cache.dir
+/Users/csilva/src/TaxiVis/build-qt6/src/TaxiVis/CMakeFiles/rebuild_cache.dir
+/Users/csilva/src/TaxiVis/build-qt6/src/TaxiVis/CMakeFiles/TaxiVis_autogen_timestamp_deps.dir
+/Users/csilva/src/TaxiVis/build-qt6/src/TaxiVis/CMakeFiles/TaxiVis_autogen.dir

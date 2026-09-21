@@ -76,7 +76,7 @@ void ColorBar::paint(QPainter *painter) {
         // draw unit
         if (!this->_unit.isEmpty()) {
           QFontMetrics metrics(painter->font());
-          int width = metrics.width(this->_unit);
+          int width = metrics.horizontalAdvance(this->_unit);
           painter->save();
           painter->translate(BAR_START_X-metrics.descent()-1, BAR_START_Y+BAR_HEIGHT/2);
           painter->rotate(270);

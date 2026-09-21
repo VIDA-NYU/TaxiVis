@@ -4,6 +4,7 @@
 #include <QGraphicsWidget>
 #include <QPointF>
 #include <QTime>
+#include <QElapsedTimer>
 #include <QGraphicsSceneMouseEvent>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>

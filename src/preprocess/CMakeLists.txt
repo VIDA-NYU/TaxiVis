@@ -11,9 +11,9 @@ add_definitions(-D_FILE_OFSET_BITS=64)
 set(Boost_USE_STATIC_LIBS OFF)
 find_package(Boost 1.42 COMPONENTS iostreams filesystem timer REQUIRED)
 
-# Find Qt5
-set(CMAKE_PREFIX_PATH "/opt/homebrew/opt/qt@5" CACHE PATH "Qt5 installation path")
-find_package(Qt5 COMPONENTS Core Gui Widgets REQUIRED)
+# Find Qt6
+set(CMAKE_PREFIX_PATH "/opt/homebrew/opt/qt" CACHE PATH "Qt installation path")
+find_package(Qt6 COMPONENTS Core Gui Widgets REQUIRED)
 
 include_directories(${Boost_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -23,23 +23,23 @@ target_link_libraries(unif96_to_bin ${Boost_LIBRARIES})
 
 # sampling - spatial sampling with census tract geometry
 add_executable(sampling sampling.cpp)
-target_link_libraries(sampling Qt5::Core Qt5::Gui Qt5::Widgets ${Boost_LIBRARIES})
+target_link_libraries(sampling Qt6::Core Qt6::Gui Qt6::Widgets ${Boost_LIBRARIES})
 
 # csv2Binary - converts single CSV file to binary Trip format
 add_executable(csv2Binary csv2Binary.cpp)
-target_link_libraries(csv2Binary Qt5::Core ${Boost_LIBRARIES})
+target_link_libraries(csv2Binary Qt6::Core ${Boost_LIBRARIES})
 
 # newFormatCsv2Binary - converts newer CSV format to binary Trip format
 add_executable(newFormatCsv2Binary newFormatCsv2Binary.cpp)
-target_link_libraries(newFormatCsv2Binary Qt5::Core ${Boost_LIBRARIES})
+target_link_libraries(newFormatCsv2Binary Qt6::Core ${Boost_LIBRARIES})
 
 # multiCsv2Binary - processes multiple CSV files listed in index file
 add_executable(multiCsv2Binary multiCsv2Binary.cpp)
-target_link_libraries(multiCsv2Binary Qt5::Core ${Boost_LIBRARIES})
+target_link_libraries(multiCsv2Binary Qt6::Core ${Boost_LIBRARIES})
 
 # testQuery - tests KdTrip query functionality
 add_executable(testQuery testQuery.cpp)
-target_link_libraries(testQuery Qt5::Core ${Boost_LIBRARIES})
+target_link_libraries(testQuery Qt6::Core ${Boost_LIBRARIES})
 
 # build_kdtrip - builds KD-tree spatial index from binary Trip data
 add_executable(build_kdtrip build_kdtrip.cpp)

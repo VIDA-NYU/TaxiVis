@@ -400,7 +400,7 @@ void GridMap::renderLabel(QPainter *painter)
     GridCell &cell = this->grid->cells[this->highlightId];
     this->useQtPainting(painter);
     QPainterPath path;
-    path.addText(-this->labelMetrics.width(cell.label)*0.5,
+    path.addText(-this->labelMetrics.horizontalAdvance(cell.label)*0.5,
                  this->labelMetrics.ascent()*0.5,
                  this->labelFont, cell.label);
     path.translate(this->geoWidget->mapView()->mapFromGeoLocation(cell.boundingRect.center()));

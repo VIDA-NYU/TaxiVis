@@ -35,7 +35,7 @@ HistogramWidget::HistogramWidget(QWidget *parent) :
     connect(ui->numBinsSpinBox,SIGNAL(editingFinished()),this,SLOT(updateNumBins()));
 
     //
-    connect(ui->attributeComboBox,SIGNAL(currentIndexChanged(QString)),this,SLOT(changeHistAttribute(QString)));
+    connect(ui->attributeComboBox,SIGNAL(currentTextChanged(QString)),this,SLOT(changeHistAttribute(QString)));
 
     //
     // connect slots that takes care that when an axis is selected, only that direction can be dragged and zoomed:

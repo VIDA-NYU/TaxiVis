@@ -228,8 +228,7 @@ void TripAnimation::renderGL()
 void TripAnimation::renderQt(QPainter *painter)
 {
   if (this->enabled && this->pathDataReady) {
-    QDateTime now;
-    now.setTime_t(this->globalTime+this->trafficTime);
+    QDateTime now = QDateTime::fromSecsSinceEpoch(this->globalTime+this->trafficTime);
     QString txt = now.toString("MM/dd/yy hh:mm:ss");
     QPainterPath path;
     path.addText(10, painter->window().height()-35, this->font, txt);

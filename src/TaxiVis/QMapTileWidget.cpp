@@ -85,7 +85,7 @@ public:
       QString fps = QString("%1 fps").arg(this->currentFps, 0, 'f', 1);
       painter->setFont(this->fpsFont);
       painter->setPen(Qt::black);
-      painter->drawText(window.right()-this->fpsFontMetrics.width(fps),
+      painter->drawText(window.right()-this->fpsFontMetrics.horizontalAdvance(fps),
                         window.height()-20, fps);
     }
     this->computeFps();
@@ -108,8 +108,8 @@ private:
   int          frameCount;
   int          frameTime[5];
   float        currentFps;
-  QTime        fpsTimer;
-  QTime        lastFpsTime;
+  QElapsedTimer fpsTimer;
+  QElapsedTimer lastFpsTime;
   QFont        fpsFont;
   QFontMetrics fpsFontMetrics;
 };

@@ -1,5 +1,6 @@
 #include "SelectionGraph.h"
 #include <sstream>
+#include <list>
 #include <cassert>
 #include <iostream>
 #include "GroupRepository.h"

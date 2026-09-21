@@ -103,7 +103,7 @@ void TemporalSeriesDialog::xAxisRangeChanged(const QCPRange &newRange)
 void TemporalSeriesDialog::timeIntervalChanged(QDateTime start, QDateTime end)
 {
     for (int i=0; i<this->plots.count(); i++) {
-        this->plots[i]->rangeDragAxis(Qt::Horizontal)->setRange(start.toTime_t(), end.toTime_t());
+        this->plots[i]->rangeDragAxis(Qt::Horizontal)->setRange(start.toSecsSinceEpoch(), end.toSecsSinceEpoch());
         this->plots[i]->replot();
     }
 }
