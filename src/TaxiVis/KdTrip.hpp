@@ -6,6 +6,7 @@
 #include <limits.h>
 #include <float.h>
 #include <vector>
+#include <cstddef>
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/unordered_set.hpp>
@@ -161,6 +162,10 @@ public:
     };
 #pragma pack(pop)
 
+    // Number of KdNodes occupied by one leaf: the leaf node plus enough
+    // extra nodes to hold the Trip stored starting at its median_value.
+    static const int kLeafNodeSpan = 1 + 1 + ((sizeof(Trip) + 8)/sizeof(KdNode));
+
     struct Iterator {
         Iterator() {}
         Iterator(const Trip*t, const KdNode *e): trip(t), end(e) {}
@@ -170,7 +175,15 @@ public:
         bool          operator==(const Iterator &it) const { return this->trip==it.trip; }
         bool          operator!=(const Iterator &it) const { return this->trip!=it.trip; }
         Iterator      operator++(int) {
-            const KdNode *node = reinterpret_cast<const KdNode*>(this->trip+1);
+            // A leaf occupies 1+numNodesPerTrip consecutive KdNodes (see
+            // build_kdtrip.cpp): the leaf node itself, whose median_value
+            // field is the start of the Trip, plus the padding nodes that
+            // hold the rest of the Trip. Step past the whole leaf so the
+            // scan for the next leaf stays on KdNode boundaries. Stepping
+            // from trip+1 instead lands mid-node and reads garbage.
+            const KdNode *node = reinterpret_cast<const KdNode*>(
+                reinterpret_cast<const char*>(this->trip) - offsetof(KdNode, median_value));
+            node += kLeafNodeSpan;
             while (node<this->end && node->child_node!=0) node++;
             if (node<this->end) {
                 this->trip = reinterpret_cast<const Trip*>(&(node->median_value));

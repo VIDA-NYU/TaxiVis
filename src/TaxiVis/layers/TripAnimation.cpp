@@ -32,6 +32,10 @@ TripAnimation::TripAnimation(GeographicalViewWidget *gw) :
 {
   this->geoWidget = gw;
   this->progress = new QProgressDialog(QString(), QString(), 0, 0, this->geoWidget);
+  // QProgressDialog starts a timer in its constructor and pops up on its own
+  // after minimumDuration (4s). reset() stops that timer so the dialog only
+  // appears once buildAnimPath() starts reporting progress via setValue().
+  this->progress->reset();
   
   this->configWidget = new QWidget();
   this->uiConfig->setupUi(this->configWidget);

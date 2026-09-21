@@ -37,7 +37,7 @@
       </property>
       <widget class="TemporalSeriesPlotWidget" name="timeSeriesWidget">
        <attribute name="title">
-        <string>Time Serie</string>
+        <string>Time Series</string>
        </attribute>
       </widget>
       <widget class="HistogramWidget" name="histogramWidget">

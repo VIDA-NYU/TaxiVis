@@ -2,13 +2,33 @@
 #include <cassert>
 #include <iostream>
 #include <QDebug>
+#include <QFile>
+#include <cstdlib>
 
 using namespace std;
 
 QueryManager::QueryManager(){
     //create KDTrip
-    std::string fname = string(DATA_DIR)+"2012_merged.kdtrip";
+    // Dataset resolution order:
+    //   1. TAXIVIS_DATA environment variable (full path to a .kdtrip file)
+    //   2. DATA_DIR/2012_merged.kdtrip (full dataset, if present)
+    //   3. DATA_DIR/sample_merged_1.kdtrip (bundled sample)
+    std::string fname;
+    const char *envData = getenv("TAXIVIS_DATA");
+    if (envData != NULL && envData[0] != '\0') {
+        fname = envData;
+    } else {
+        fname = string(DATA_DIR)+"2012_merged.kdtrip";
+        if (!QFile::exists(QString::fromStdString(fname))) {
+            fname = string(DATA_DIR)+"sample_merged_1.kdtrip";
+        }
+    }
     qDebug() << "Loading taxi trip data from:" << QString::fromStdString(fname);
+    if (!QFile::exists(QString::fromStdString(fname))) {
+        qCritical() << "Dataset not found:" << QString::fromStdString(fname);
+        qCritical() << "Set TAXIVIS_DATA to the path of a .kdtrip file, or place one in" << DATA_DIR;
+        exit(1);
+    }
     kdtrip = new KdTrip(fname);
 
     // Count trips by iterating

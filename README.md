@@ -65,21 +65,52 @@ export CMAKE_PREFIX_PATH="/path/to/qt5"
 
 ## 2. Running TaxiVis
 
-### 2.1 Sample Data
+### 2.1 Choosing a Dataset
 
-A sample dataset of 10,000 trips from January 2013 is included in `data/sample_merged_1.kdtrip`.
+TaxiVis loads one `.kdtrip` file at startup. It looks for the file in this order:
 
-The data directory is configured in [CMakeLists.txt](src/TaxiVis/CMakeLists.txt) (line 11):
+1. The path in the `TAXIVIS_DATA` environment variable, if set.
+2. `data/2012_merged.kdtrip` (the output of `process_taxi_data.sh`), if present.
+3. `data/sample_merged_1.kdtrip`, the bundled sample.
+
+`data/` is the repository's `data` directory. Its location is compiled in via
+the `DATA_DIR` macro in [CMakeLists.txt](src/TaxiVis/CMakeLists.txt) (line 11):
 ```cmake
 add_definitions(-DDATA_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/../../data/\")
 ```
 
+If the resolved file does not exist, TaxiVis prints the path it tried and exits.
+
+**The bundled sample** (`data/sample_merged_1.kdtrip`) has 10,000 trips. It is
+useful for checking that the build works, but it is not a representative slice
+of a month: about 98% of its trips are from a single day (2013-01-13), with a
+handful of trips scattered over the rest of January. Temporal plots will show
+one spike. For real exploration, build a full month with the pipeline in
+[Section 3](#3-data-preprocessing).
+
 ### 2.2 Executing
 
-From the build directory:
+From the build directory, with the bundled sample:
 ```bash
 ./src/TaxiVis/TaxiVis
 ```
+
+With your own dataset:
+```bash
+TAXIVIS_DATA=/path/to/2013_01.kdtrip ./src/TaxiVis/TaxiVis
+```
+
+On startup the console shows which file was loaded, the number of trips, and
+the time range, for example:
+```
+Loading taxi trip data from: "/Users/you/data/FOIL2013/processed/2013_01.kdtrip"
+Taxi trip data loaded successfully
+  Number of trips: 14776615
+  Time range: "2013-01-01 00:00" to "2013-02-01 10:33"
+```
+
+The `.kdtrip` file is memory-mapped, so a full month (about 1.3 GB) opens in
+well under a second and the process stays small until you query it.
 
 ### 2.3 Available Features
 
@@ -98,7 +129,7 @@ From the build directory:
 
 - **Animated Trip Paths (TripAnimation)** - Disabled on macOS due to geometry shader compatibility issues
   - Alternative: Use TripLocation layer to visualize pickup/dropoff points
-- **File → Open Dialog** - Not yet implemented; change dataset in [querymanager.cpp](src/TaxiVis/querymanager.cpp#L10) and rebuild
+- **File → Open Dialog** - Not yet implemented; choose the dataset with `TAXIVIS_DATA` (see [Section 2.1](#21-choosing-a-dataset))
 
 ## 3. Data Preprocessing
 
@@ -117,34 +148,68 @@ All preprocessing tools are in `src/preprocess/` (Julia) and `build/src/preproce
 ### 3.2 Quick Start (Julia Pipeline - Recommended)
 
 **Requirements:**
-- Julia 1.6+ installed
-- Raw NYC taxi CSV files (trip_data and trip_fare)
+- Julia 1.6+ with the `CSV` and `DataFrames` packages (`julia -e 'using Pkg; Pkg.add(["CSV","DataFrames"])'`)
+- The `build_kdtrip` tool from the CMake build (`build/src/preprocess/build_kdtrip`)
+- Raw NYC TLC CSV files for 2013, which come as **pairs** per month:
+  - `trip_data_N.csv`: medallion, hack license, vendor, pickup/dropoff times, passengers, distance, coordinates
+  - `trip_fare_N.csv`: medallion, hack license, vendor, pickup time, payment type, fare, surcharge, tax, tip, tolls
 
-**Automated Pipeline:**
+  where `N` is the month (1 to 12). Both halves of a month are required: the
+  trip file has the times and coordinates, the fare file has the money. A
+  month is about 2.3 GB of trip data plus 1.6 GB of fare data, 14 to 15
+  million trips.
+
+**Processing one month by hand** (recommended; the three steps take a few
+minutes on 16 cores):
 ```bash
-# Process your data in one command
-./process_taxi_data.sh
+RAW=/path/to/FOIL2013         # contains Tripdata_2013/ and Faredata_2013/
+OUT=$RAW/processed
+mkdir -p $OUT
+
+# Step 1: Merge trip and fare CSVs on (medallion, hack_license, vendor_id, pickup_datetime)
+julia -t 16 src/preprocess/merge.jl \
+    $RAW/Tripdata_2013/trip_data_1.csv \
+    $RAW/Faredata_2013/trip_fare_1.csv \
+    $OUT/2013_01_merged.csv
+
+# Step 2: Convert the merged CSV to the 56-byte binary Trip format
+julia -t 16 src/preprocess/csv2Binary_mt.jl $OUT/2013_01_merged.csv $OUT/2013_01_merged.trip
+
+# Step 3: Build the KD-tree index that TaxiVis loads
+./build/src/preprocess/build_kdtrip $OUT/2013_01_merged.trip $OUT/2013_01.kdtrip
+
+# Run it
+TAXIVIS_DATA=$OUT/2013_01.kdtrip ./build/src/TaxiVis/TaxiVis
 ```
 
-The script automatically:
-1. Merges trip and fare data (multithreaded)
-2. Converts to binary format (multithreaded)
-3. Builds KD-tree spatial index
-4. Displays timing statistics
+Intermediate files are large (the merged CSV is about 2 GB, the `.trip` file
+about 800 MB) and can be deleted once the `.kdtrip` exists. Keep them out of
+the repository; `data/*.csv`, `data/*.trip` and `data/*.kdtrip` are ignored by
+git.
 
-**Performance:** Processes ~15 million trips (4GB CSV) in ~2-5 minutes on 16 cores.
-
-**Manual Julia Commands:**
+**Time zone.** Timestamps in the CSVs are New York wall-clock times. The
+converter interprets them in the machine's local time zone, which is what
+TaxiVis uses for queries and display. If you process data on a machine that is
+not set to Eastern time, run the conversion with `TZ=America/New_York` in the
+environment so that dates and hours in the application match the raw data:
 ```bash
-# Step 1: Merge trip and fare CSVs
-julia -t 16 src/preprocess/merge.jl data/trip_data.csv data/trip_fare.csv data/merged.csv
-
-# Step 2: Convert to binary
-julia -t 16 src/preprocess/csv2Binary_mt.jl data/merged.csv data/merged.trip
-
-# Step 3: Build KD-tree index
-./build/src/preprocess/build_kdtrip data/merged.trip data/merged.kdtrip
+TZ=America/New_York julia -t 16 src/preprocess/csv2Binary_mt.jl ...
 ```
+
+**Automated script.** `process_taxi_data.sh` runs the same three steps with
+timing output, but its input and output paths are hard-coded: it expects
+`data/2012_trip_data_1.csv` and `data/2012_trip_fare_1.csv` and writes
+`data/2012_merged.kdtrip`, which TaxiVis picks up automatically (see
+[Section 2.1](#21-choosing-a-dataset)). Edit the variables at the top of the
+script to point at other files.
+
+**Multiple months.** Each month produces its own `.kdtrip`. TaxiVis loads a
+single file, so switch datasets by changing `TAXIVIS_DATA`. To explore several
+months in one dataset, merge each month (Step 1), concatenate the merged CSVs
+(keeping only the first header line), and run Steps 2 and 3 on the combined
+file. Run Step 2 once on the combined CSV rather than concatenating `.trip`
+files: the converter assigns taxi and payment-type codes per run, so codes
+from separately converted months would not agree.
 
 ### 3.3 C++ Preprocessing Tools (Legacy)
 
@@ -252,18 +317,10 @@ python src/preprocess/merge.py trips.csv fares.csv merged.csv
 
 ### 3.4 Loading Data in TaxiVis
 
-**Option 1: Update default dataset** (edit [querymanager.cpp:10](src/TaxiVis/querymanager.cpp#L10)):
-```cpp
-std::string fname = string(DATA_DIR)+"your_data.kdtrip";
-```
-Then rebuild TaxiVis.
-
-**Option 2: File → Open** (not yet implemented in current version)
-
-The application will display:
-- Number of trips loaded
-- Time range of the dataset
-- Data statistics on startup
+Point TaxiVis at any `.kdtrip` file with the `TAXIVIS_DATA` environment
+variable, or drop it in `data/` as `2012_merged.kdtrip`. See
+[Section 2.1](#21-choosing-a-dataset) for the full resolution order. No
+rebuild is needed. A File → Open dialog is not implemented yet.
 
 ### 3.5 Data Format Reference
 

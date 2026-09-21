@@ -27,9 +27,19 @@ struct Trip
     passengers::UInt8
 end
 
+# Interpret the CSV wall-clock timestamp in the machine's local time zone,
+# matching the original C++ converter (QDateTime::fromString, local time)
+# and the queries/display in TaxiVis (mktime / QDateTime::fromTime_t).
+# datetime2unix would treat it as UTC and shift every trip by the UTC offset.
+function local_unix(dt::DateTime)
+    tm = Libc.TmStruct(second(dt), minute(dt), hour(dt), day(dt),
+                       month(dt) - 1, year(dt) - 1900, 0, 0, -1)  # isdst=-1: let mktime decide
+    return ccall(:mktime, Int, (Ref{Libc.TmStruct},), tm)
+end
+
 function parse_datetime_to_unix(dt_str)
     dt = DateTime(dt_str, "yyyy-mm-dd HH:MM:SS")
-    return UInt32(round(datetime2unix(dt)))
+    return UInt32(local_unix(dt))
 end
 
 function main()
